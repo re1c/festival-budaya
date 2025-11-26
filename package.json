@@ -1,15 +1,22 @@
 {
   "name": "fp-grafkom",
   "version": "1.0.0",
-  "description": "",
+  "description": "Reog Ponorogo 3D Interactive Museum",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [],
+  "keywords": [
+    "three.js",
+    "3d",
+    "reog-ponorogo",
+    "computer-graphics"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "three": "^0.181.2"
   },
