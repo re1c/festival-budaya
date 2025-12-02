@@ -1,16 +1,20 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
 // =========================
 // SETUP DASAR SCENE
 // =========================
 const scene = new THREE.Scene();
+const flameObjects = []; // Global array untuk animasi api
 
-// Skybox (langit malam Bali)
-const skyColor = new THREE.Color(0x1a1a3e);
+// Skybox (langit malam Bali yang lebih dalam)
+const skyColor = new THREE.Color(0x050510); // Lebih gelap untuk kontras malam
 scene.background = skyColor;
-scene.fog = new THREE.FogExp2(0x1a1a3e, 0.008);
+scene.fog = new THREE.FogExp2(0x050510, 0.015); // Fog lebih tebal untuk kedalaman
 
 // Kamera
 const camera = new THREE.PerspectiveCamera(
@@ -21,78 +25,151 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 2, 20);
 
-// Renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// Renderer (High Quality Setup)
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio untuk performa
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Shadow lebih halus
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // KUNCI REALISME: Cinematic lighting
+renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
+
+// Post-Processing (Bloom Effect)
+const renderScene = new RenderPass(scene, camera);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  1.5, // strength
+  0.4, // radius
+  0.85 // threshold
+);
+bloomPass.strength = 0.8; // Intensitas glow
+bloomPass.radius = 0.5; // Sebaran glow
+bloomPass.threshold = 0.2; // Batas cahaya yang kena glow
+
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
 
 // Pointer Lock Controls untuk FPS-style movement
 const controls = new PointerLockControls(camera, document.body);
 
 // =========================
-// LIGHTING - SUASANA MALAM NYEPI
+// LIGHTING - SUASANA MALAM NYEPI (REALISTIC)
 // =========================
 
-// Ambient light (terang)
-const ambientLight = new THREE.AmbientLight(0x6688bb, 1.2);
+// Ambient light (Sangat redup, biru malam)
+const ambientLight = new THREE.AmbientLight(0x0a0a20, 0.2);
 scene.add(ambientLight);
 
-// Hemisphere light
-const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+// Hemisphere light (Pantulan tanah vs langit)
+const hemiLight = new THREE.HemisphereLight(0x1a1a40, 0x050510, 0.3);
 scene.add(hemiLight);
 
-// Moonlight (terang)
-const moonLight = new THREE.DirectionalLight(0xffffff, 1.5);
+// Moonlight (Key Light - Cold Blue)
+const moonLight = new THREE.DirectionalLight(0xaaccff, 2.5); // Intensity tinggi untuk tone mapping
 moonLight.position.set(50, 100, 50);
 moonLight.castShadow = true;
-moonLight.shadow.mapSize.width = 2048;
-moonLight.shadow.mapSize.height = 2048;
+moonLight.shadow.mapSize.width = 4096; // High res shadow
+moonLight.shadow.mapSize.height = 4096;
 moonLight.shadow.camera.near = 0.5;
 moonLight.shadow.camera.far = 500;
 moonLight.shadow.camera.left = -100;
 moonLight.shadow.camera.right = 100;
 moonLight.shadow.camera.top = 100;
 moonLight.shadow.camera.bottom = -100;
+moonLight.shadow.bias = -0.0005; // Mengurangi shadow acne
 scene.add(moonLight);
 
-// Torch lights (obor) - akan ditambahkan di sekitar ogoh-ogoh
+// Torch lights (obor) - Warm Orange
 function createTorchLight(x, y, z) {
-  const torchLight = new THREE.PointLight(0xff6600, 2, 15);
-  torchLight.position.set(x, y, z);
-  torchLight.castShadow = false; // Disabled untuk performance
+  // PointLight untuk pencahayaan sekitar
+  const torchLight = new THREE.PointLight(0xff5500, 50, 25, 2); // High intensity for bloom
+  torchLight.position.set(x, y + 0.5, z);
+  torchLight.castShadow = true; // Enable shadow untuk realisme dramatis
+  torchLight.shadow.bias = -0.0001;
   scene.add(torchLight);
 
   // Visual obor
-  const torchGeom = new THREE.CylinderGeometry(0.1, 0.15, 1.5, 8);
-  const torchMat = new THREE.MeshStandardMaterial({ color: 0x4a3728 });
+  const torchGeom = new THREE.CylinderGeometry(0.05, 0.08, 1.5, 8);
+  const torchMat = new THREE.MeshStandardMaterial({ 
+    color: 0x2a1a0a,
+    roughness: 0.9 
+  });
   const torch = new THREE.Mesh(torchGeom, torchMat);
   torch.position.set(x, y - 0.75, z);
+  torch.castShadow = true;
   scene.add(torch);
 
-  // Api (particles sederhana)
-  const fireGeom = new THREE.SphereGeometry(0.2, 8, 8);
-  const fireMat = new THREE.MeshBasicMaterial({ color: 0xff4400 });
+  // Api (Core - Putih panas)
+  const fireCoreGeom = new THREE.SphereGeometry(0.15, 8, 8);
+  const fireCoreMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // Putih untuk pusat panas
+  const fireCore = new THREE.Mesh(fireCoreGeom, fireCoreMat);
+  fireCore.position.set(x, y + 0.2, z);
+  scene.add(fireCore);
+
+  // Api (Outer - Orange Glow)
+  const fireGeom = new THREE.SphereGeometry(0.25, 8, 8);
+  const fireMat = new THREE.MeshBasicMaterial({ 
+    color: 0xff4400,
+    transparent: true,
+    opacity: 0.8
+  });
   const fire = new THREE.Mesh(fireGeom, fireMat);
   fire.position.set(x, y + 0.3, z);
   fire.userData.isFlame = true;
+  
+  // Randomize phase biar gak sinkron semua
+  fire.userData.phase = Math.random() * Math.PI * 2;
+  
   scene.add(fire);
-  flameObjects.push(fire); // Track untuk animasi
+  flameObjects.push(fire); 
 
   return { light: torchLight, fire };
 }
 
 // =========================
-// TERRAIN - OPEN WORLD
+// TERRAIN - OPEN WORLD (IMPROVED)
 // =========================
 
+// Texture Loader
+const textureLoader = new THREE.TextureLoader();
+
+// Procedural Grid Texture untuk tanah (biar tidak polos)
+const canvas = document.createElement('canvas');
+canvas.width = 512;
+canvas.height = 512;
+const context = canvas.getContext('2d');
+context.fillStyle = '#1a2a1a'; // Base dark green
+context.fillRect(0, 0, 512, 512);
+// Add noise
+for(let i=0; i<50000; i++) {
+    context.fillStyle = Math.random() > 0.5 ? '#2a3a2a' : '#152015';
+    context.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+}
+const groundTexture = new THREE.CanvasTexture(canvas);
+groundTexture.wrapS = THREE.RepeatWrapping;
+groundTexture.wrapT = THREE.RepeatWrapping;
+groundTexture.repeat.set(50, 50);
+
 // Ground - tanah luas
-const groundGeom = new THREE.PlaneGeometry(200, 200, 50, 50);
+const groundGeom = new THREE.PlaneGeometry(200, 200, 128, 128); // Lebih detail vertices
+// Modifikasi vertices untuk uneven terrain (sedikit bergelombang)
+const posAttribute = groundGeom.attributes.position;
+for ( let i = 0; i < posAttribute.count; i ++ ) {
+    const x = posAttribute.getX( i );
+    const y = posAttribute.getY( i );
+    // Simple noise function simulation
+    const z = Math.sin(x * 0.1) * Math.cos(y * 0.1) * 0.5 + Math.random() * 0.2; 
+    posAttribute.setZ( i, z ); // Note: PlaneGeometry defaultnya di XY plane, nanti di rotate
+}
+groundGeom.computeVertexNormals();
+
 const groundMat = new THREE.MeshStandardMaterial({
-  color: 0x4a8a3c,
-  roughness: 0.8,
+  map: groundTexture,
+  roughness: 0.9,
+  metalness: 0.1,
 });
 const ground = new THREE.Mesh(groundGeom, groundMat);
 ground.rotation.x = -Math.PI / 2;
@@ -237,7 +314,7 @@ function loadOgohOgoh(location, index) {
 ogohLocations.forEach((loc, i) => loadOgohOgoh(loc, i));
 
 // =========================
-// PLAYER MOVEMENT SYSTEM
+// PLAYER MOVEMENT SYSTEM (IMPROVED)
 // =========================
 
 const playerState = {
@@ -248,8 +325,10 @@ const playerState = {
   canJump: true,
   velocity: new THREE.Vector3(),
   direction: new THREE.Vector3(),
-  speed: 15,
-  jumpHeight: 8,
+  speed: 12, // Sedikit lebih lambat agar terasa berat/realistis
+  jumpHeight: 10,
+  bobTimer: 0, // Untuk head bobbing
+  defaultCameraY: 2 // Tinggi mata default
 };
 
 // Keyboard controls
@@ -467,7 +546,7 @@ function checkProximity() {
 // PARTICLE SYSTEM - API/ASAP
 // =========================
 
-const flameObjects = []; // Track flame objects
+// const flameObjects = []; // Moved to top scope
 
 function createFireParticles() {
   const particleCount = 100; // Reduced untuk performance
@@ -509,21 +588,20 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // =========================
-// ANIMATION LOOP
+// ANIMATION LOOP (PHYSICS BASED)
 // =========================
 
 const clock = new THREE.Clock();
-let prevTime = performance.now();
 
 function animate() {
   requestAnimationFrame(animate);
 
-  const time = performance.now();
-  const delta = (time - prevTime) / 1000;
-  prevTime = time;
+  const delta = clock.getDelta(); // Use Three.js clock for stable delta
+  const time = clock.getElapsedTime();
 
   if (controls.isLocked) {
     // Show UI elements
@@ -532,31 +610,54 @@ function animate() {
     minimap.style.display = "block";
     musicBtn.style.display = "block";
 
-    // Player movement with gravity
-    playerState.velocity.y -= 20 * delta; // Gravity
+    // --- PHYSICS MOVEMENT ---
+    
+    // Damping (Inertia) - Slow down when not pressing keys
+    playerState.velocity.x -= playerState.velocity.x * 10.0 * delta;
+    playerState.velocity.z -= playerState.velocity.z * 10.0 * delta;
+    playerState.velocity.y -= 9.8 * 2.0 * delta; // Gravity (Mass 2.0)
 
-    playerState.direction.z =
-      Number(playerState.moveForward) - Number(playerState.moveBackward);
-    playerState.direction.x =
-      Number(playerState.moveRight) - Number(playerState.moveLeft);
+    playerState.direction.z = Number(playerState.moveForward) - Number(playerState.moveBackward);
+    playerState.direction.x = Number(playerState.moveRight) - Number(playerState.moveLeft);
     playerState.direction.normalize();
 
+    // Acceleration
     if (playerState.moveForward || playerState.moveBackward) {
-      playerState.velocity.z = -playerState.direction.z * playerState.speed;
-    } else {
-      playerState.velocity.z = 0;
+      playerState.velocity.z -= playerState.direction.z * 400.0 * delta; // Force based
     }
-
     if (playerState.moveLeft || playerState.moveRight) {
-      playerState.velocity.x = -playerState.direction.x * playerState.speed;
-    } else {
-      playerState.velocity.x = 0;
+      playerState.velocity.x -= playerState.direction.x * 400.0 * delta;
     }
 
+    // Terminal Velocity Cap
+    const maxSpeed = playerState.speed;
+    const currentSpeed = Math.sqrt(playerState.velocity.x**2 + playerState.velocity.z**2);
+    if (currentSpeed > maxSpeed) {
+        const ratio = maxSpeed / currentSpeed;
+        playerState.velocity.x *= ratio;
+        playerState.velocity.z *= ratio;
+    }
+
+    // Apply Movement
     controls.moveRight(-playerState.velocity.x * delta);
     controls.moveForward(-playerState.velocity.z * delta);
-
     camera.position.y += playerState.velocity.y * delta;
+
+    // --- HEAD BOBBING ---
+    // Hanya bobbing jika bergerak di tanah
+    if (currentSpeed > 0.5 && camera.position.y <= playerState.defaultCameraY + 0.1) {
+        playerState.bobTimer += delta * 15; // Speed of bob
+        camera.position.y = Math.max(
+            2, // Min height
+            playerState.defaultCameraY + Math.sin(playerState.bobTimer) * 0.15
+        );
+    } else {
+        playerState.bobTimer = 0;
+        // Smooth return to default height
+        if (camera.position.y > 2 && camera.position.y < 3) {
+             camera.position.y = THREE.MathUtils.lerp(camera.position.y, playerState.defaultCameraY, delta * 5);
+        }
+    }
 
     // Ground collision
     if (camera.position.y < 2) {
@@ -601,12 +702,17 @@ function animate() {
     fireParticles.geometry.attributes.position.needsUpdate = true;
   }
 
-  // Animate flames (optimized)
+  // Animate flames (Realistic Flicker)
   flameObjects.forEach((flame) => {
-    flame.scale.setScalar(1 + Math.sin(time * 0.01) * 0.3);
+    // Gunakan phase unik tiap api biar gak barengan
+    const flicker = Math.sin(time * 10 + (flame.userData.phase || 0)) * 0.1 + 
+                    Math.cos(time * 20 + (flame.userData.phase || 0)) * 0.05;
+    flame.scale.setScalar(1 + flicker);
+    flame.material.opacity = 0.8 + flicker;
   });
 
-  renderer.render(scene, camera);
+  // RENDER DENGAN POST-PROCESSING
+  composer.render();
 }
 
 animate();
