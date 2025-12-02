@@ -14,7 +14,45 @@ const flameObjects = []; // Global array untuk animasi api
 // Skybox (langit malam Bali yang lebih dalam)
 const skyColor = new THREE.Color(0x050510); // Lebih gelap untuk kontras malam
 scene.background = skyColor;
-scene.fog = new THREE.FogExp2(0x050510, 0.015); // Fog lebih tebal untuk kedalaman
+scene.fog = new THREE.FogExp2(0x050510, 0.002); // Fog dikurangi agar bintang terlihat
+
+// STARFIELD (Realistic Stars)
+function createStarfield() {
+    const starsGeometry = new THREE.BufferGeometry();
+    const starsCount = 5000;
+    const posArray = new Float32Array(starsCount * 3);
+    const sizeArray = new Float32Array(starsCount);
+
+    for(let i = 0; i < starsCount * 3; i+=3) {
+        // Sphere distribution
+        const r = 400 + Math.random() * 400; // Jauh di angkasa
+        const theta = 2 * Math.PI * Math.random();
+        const phi = Math.acos(2 * Math.random() - 1);
+        
+        posArray[i] = r * Math.sin(phi) * Math.cos(theta);
+        posArray[i+1] = Math.abs(r * Math.sin(phi) * Math.sin(theta)); // Hemisphere atas dominan
+        posArray[i+2] = r * Math.cos(phi);
+
+        sizeArray[i/3] = 0.5 + Math.random() * 2.0; // Variasi ukuran lebih besar
+    }
+
+    starsGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    starsGeometry.setAttribute('size', new THREE.BufferAttribute(sizeArray, 1));
+
+    // Simple shader material for twinkling stars
+    const starsMaterial = new THREE.PointsMaterial({
+        size: 1.0, // Base size diperbesar
+        color: 0xffffff,
+        transparent: true,
+        opacity: 1.0,
+        sizeAttenuation: true,
+        fog: false // PENTING: Bintang tidak tertutup kabut
+    });
+
+    const starField = new THREE.Points(starsGeometry, starsMaterial);
+    scene.add(starField);
+}
+createStarfield();
 
 // Kamera
 const camera = new THREE.PerspectiveCamera(
@@ -159,10 +197,30 @@ const groundGeom = new THREE.PlaneGeometry(200, 200, 128, 128); // Lebih detail 
 const posAttribute = groundGeom.attributes.position;
 for ( let i = 0; i < posAttribute.count; i ++ ) {
     const x = posAttribute.getX( i );
-    const y = posAttribute.getY( i );
-    // Simple noise function simulation
-    const z = Math.sin(x * 0.1) * Math.cos(y * 0.1) * 0.5 + Math.random() * 0.2; 
-    posAttribute.setZ( i, z ); // Note: PlaneGeometry defaultnya di XY plane, nanti di rotate
+    const y = posAttribute.getY( i ); // This is actually Z in world space because of rotation later
+    
+    // Calculate distance to path center (Cross shape)
+    // Path width is 4, so half width is 2. Let's give some buffer for blending.
+    const distToX = Math.abs(y); // Distance to X axis (horizontal path)
+    const distToY = Math.abs(x); // Distance to Y axis (vertical path in geometry, Z in world)
+    
+    const pathWidth = 3.0;
+    const blendWidth = 4.0;
+    
+    let height = Math.sin(x * 0.1) * Math.cos(y * 0.1) * 0.5 + Math.random() * 0.2;
+    
+    // Flatten logic
+    const minDist = Math.min(distToX, distToY);
+    
+    if (minDist < pathWidth + blendWidth) {
+        const factor = Math.max(0, (minDist - pathWidth) / blendWidth); // 0 at path, 1 at outside
+        // Smoothstep for better blending
+        const smoothFactor = factor * factor * (3 - 2 * factor);
+        
+        height = THREE.MathUtils.lerp(0.05, height, smoothFactor);
+    }
+    
+    posAttribute.setZ( i, height );
 }
 groundGeom.computeVertexNormals();
 
@@ -176,26 +234,115 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Jalan setapak
+// Jalan setapak (Improved Visuals)
 function createPath() {
-  const pathGeom = new THREE.PlaneGeometry(4, 100);
+  // Texture untuk jalan (Dirt Road)
+  const pathCanvas = document.createElement('canvas');
+  pathCanvas.width = 512;
+  pathCanvas.height = 512;
+  const pCtx = pathCanvas.getContext('2d');
+  
+  // Base dirt color
+  pCtx.fillStyle = '#3e2b1f'; 
+  pCtx.fillRect(0, 0, 512, 512);
+  
+  // Add noise/pebbles
+  for(let i=0; i<10000; i++) {
+      pCtx.fillStyle = Math.random() > 0.5 ? '#4a3728' : '#2a1a0a';
+      const s = Math.random() * 3;
+      pCtx.fillRect(Math.random() * 512, Math.random() * 512, s, s);
+  }
+  
+  const pathTexture = new THREE.CanvasTexture(pathCanvas);
+  pathTexture.wrapS = THREE.RepeatWrapping;
+  pathTexture.wrapT = THREE.RepeatWrapping;
+  pathTexture.repeat.set(1, 20); // Repeat along length
+
+  const pathGeom = new THREE.PlaneGeometry(6, 200); // Sedikit lebih lebar dari area flat
   const pathMat = new THREE.MeshStandardMaterial({
-    color: 0x8b7355,
+    map: pathTexture,
     roughness: 1,
+    bumpMap: pathTexture, // Sedikit tekstur kasar
+    bumpScale: 0.05,
+    transparent: true,
+    opacity: 0.9, // Blend sedikit dengan tanah bawahnya
+    polygonOffset: true,
+    polygonOffsetFactor: -1 // Mencegah z-fighting
   });
+  
   const path = new THREE.Mesh(pathGeom, pathMat);
   path.rotation.x = -Math.PI / 2;
-  path.position.y = 0.01;
-  path.receiveShadow = true; // Enable shadow di jalan
+  path.position.y = 0.06; // Sedikit di atas tanah yang sudah di-flatten (0.05)
+  path.receiveShadow = true;
   scene.add(path);
 
   // Path horizontal
   const path2 = path.clone();
   path2.rotation.z = Math.PI / 2;
-  path2.receiveShadow = true; // Enable shadow di jalan
+  path2.receiveShadow = true;
   scene.add(path2);
 }
 createPath();
+
+// INSTANCED GRASS (High Performance Vegetation)
+function createGrass() {
+    const grassCount = 10000;
+    const dummy = new THREE.Object3D();
+    
+    // Simple blade geometry
+    const geometry = new THREE.ConeGeometry(0.05, 0.5, 2);
+    geometry.translate(0, 0.25, 0); // Pivot at bottom
+    
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x2a4a2a,
+        roughness: 0.8,
+        side: THREE.DoubleSide
+    });
+    
+    const grassMesh = new THREE.InstancedMesh(geometry, material, grassCount);
+    grassMesh.receiveShadow = true;
+    
+    for(let i=0; i<grassCount; i++) {
+        const x = (Math.random() - 0.5) * 180;
+        const z = (Math.random() - 0.5) * 180;
+        
+        // Avoid road area (simple check)
+        if(Math.abs(x) < 4 || Math.abs(z) < 4) continue; // Lebarkan area bebas rumput
+
+        dummy.position.set(x, 0, z);
+        
+        // Adjust height based on terrain (approximate)
+        // Harus sama dengan rumus terrain di atas
+        let terrainHeight = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 0.5 + Math.random() * 0.2;
+        
+        // Flatten logic for grass placement (biar gak melayang di pinggir jalan)
+        const distToX = Math.abs(z);
+        const distToY = Math.abs(x);
+        const minDist = Math.min(distToX, distToY);
+        const pathWidth = 3.0;
+        const blendWidth = 4.0;
+        
+        if (minDist < pathWidth + blendWidth) {
+             const factor = Math.max(0, (minDist - pathWidth) / blendWidth);
+             const smoothFactor = factor * factor * (3 - 2 * factor);
+             terrainHeight = THREE.MathUtils.lerp(0.05, terrainHeight, smoothFactor);
+        }
+
+        dummy.position.y = terrainHeight;
+        
+        dummy.rotation.y = Math.random() * Math.PI;
+        
+        // Random scale
+        const s = 0.5 + Math.random() * 0.5;
+        dummy.scale.set(s, s * (1 + Math.random()), s);
+        
+        dummy.updateMatrix();
+        grassMesh.setMatrixAt(i, dummy.matrix);
+    }
+    
+    scene.add(grassMesh);
+}
+createGrass();
 
 // Pohon sederhana
 function createTree(x, z) {
