@@ -20,7 +20,7 @@ scene.fog = new THREE.FogExp2(0x050510, 0.002); // Fog dikurangi agar bintang te
 // STARFIELD (Realistic Stars)
 function createStarfield() {
     const starsGeometry = new THREE.BufferGeometry();
-    const starsCount = 5000;
+    const starsCount = 3000; // Reduced count (5000 -> 3000)
     const posArray = new Float32Array(starsCount * 3);
     const sizeArray = new Float32Array(starsCount);
 
@@ -237,13 +237,13 @@ const textureLoader = new THREE.TextureLoader();
 
 // Procedural Grid Texture untuk tanah (Seamless & Natural)
 const canvas = document.createElement('canvas');
-canvas.width = 1024; // Optimized Resolution
-canvas.height = 1024;
+canvas.width = 512; // Optimized Resolution (1024 -> 512)
+canvas.height = 512;
 const context = canvas.getContext('2d');
 
 // 1. Base Layer (Dark Soil)
 context.fillStyle = '#1a1510'; 
-context.fillRect(0, 0, 1024, 1024);
+context.fillRect(0, 0, 512, 512);
 
 // Helper for seamless drawing
 function drawSeamlessSpot(x, y, radius, color) {
@@ -259,37 +259,37 @@ function drawSeamlessSpot(x, y, radius, color) {
     
     // Draw center and wrapped versions
     draw(x, y);
-    draw(x + 2048, y);
-    draw(x - 2048, y);
-    draw(x, y + 2048);
-    draw(x, y - 2048);
-    draw(x + 2048, y + 2048);
-    draw(x - 2048, y - 2048);
-    draw(x + 2048, y - 2048);
-    draw(x - 2048, y + 2048);
+    draw(x + 1024, y);
+    draw(x - 1024, y);
+    draw(x, y + 1024);
+    draw(x, y - 1024);
+    draw(x + 1024, y + 1024);
+    draw(x - 1024, y - 1024);
+    draw(x + 1024, y - 1024);
+    draw(x - 1024, y + 1024);
 }
 
 // 2. Large Noise Patches (Grass/Moss) - Seamless
 for(let i=0; i<150; i++) { 
-    const x = Math.random() * 2048;
-    const y = Math.random() * 2048;
-    const radius = 150 + Math.random() * 200; 
+    const x = Math.random() * 1024;
+    const y = Math.random() * 1024;
+    const radius = 75 + Math.random() * 100; // Reduced radius
     drawSeamlessSpot(x, y, radius, 'rgba(30, 50, 30, 0.3)'); // Dark Green
 }
 
 // 3. Medium Noise (Dry Earth)
 for(let i=0; i<200; i++) { 
-    const x = Math.random() * 2048;
-    const y = Math.random() * 2048;
-    const radius = 50 + Math.random() * 100; 
+    const x = Math.random() * 1024;
+    const y = Math.random() * 1024;
+    const radius = 25 + Math.random() * 50; // Reduced radius
     drawSeamlessSpot(x, y, radius, 'rgba(60, 40, 30, 0.2)'); // Brownish
 }
 
 // 4. Small Noise (Dirt Detail/Pebbles)
-for(let i=0; i<300000; i++) {
+for(let i=0; i<150000; i++) { // Reduced count
     context.fillStyle = Math.random() > 0.5 ? '#2a2015' : '#0f0a05';
     const s = Math.random() * 3;
-    context.fillRect(Math.random() * 2048, Math.random() * 2048, s, s);
+    context.fillRect(Math.random() * 1024, Math.random() * 1024, s, s);
 }
 
 const groundTexture = new THREE.CanvasTexture(canvas);
@@ -338,10 +338,9 @@ for ( let i = 0; i < posAttribute.count; i ++ ) {
 }
 groundGeom.computeVertexNormals();
 
-const groundMat = new THREE.MeshStandardMaterial({
+const groundMat = new THREE.MeshLambertMaterial({ // Optimized Material
   map: groundTexture,
-  roughness: 0.9,
-  metalness: 0.1,
+  color: 0x888888
 });
 const ground = new THREE.Mesh(groundGeom, groundMat);
 ground.rotation.x = -Math.PI / 2;
@@ -480,8 +479,8 @@ function createGrass() {
     });
     
     const grassMesh = new THREE.InstancedMesh(geometry, grassMaterial, grassCount);
-    grassMesh.receiveShadow = true;
-    grassMesh.castShadow = true; // Grass casting shadow adds depth
+    grassMesh.receiveShadow = false; // Disable shadow receiving for grass (Expensive)
+    grassMesh.castShadow = false; // Disable shadow casting for grass (Expensive)
     
     for(let i=0; i<grassCount; i++) {
         const x = (Math.random() - 0.5) * 190;
@@ -539,13 +538,13 @@ createGrass();
 // Pohon sederhana (Improved Procedural Tree with Bark Texture)
 // Generate Bark Texture (High Res & Realistic)
 const barkCanvas = document.createElement('canvas');
-barkCanvas.width = 1024;
-barkCanvas.height = 1024;
+barkCanvas.width = 512; // Optimized (1024 -> 512)
+barkCanvas.height = 512;
 const bCtx = barkCanvas.getContext('2d');
 
 // 1. Base Noise (Organic Brown)
 bCtx.fillStyle = '#3e2723';
-bCtx.fillRect(0,0,1024,1024);
+bCtx.fillRect(0,0,512,512);
 
 // Helper for noise
 function noise(ctx, width, height, density, color, sizeMin, sizeMax) {
@@ -560,9 +559,9 @@ function noise(ctx, width, height, density, color, sizeMin, sizeMax) {
 }
 
 // 2. Deep Grooves (Vertical Striations)
-for(let i=0; i<5000; i++) {
-    const x = Math.random() * 1024;
-    const y = Math.random() * 1024;
+for(let i=0; i<2500; i++) { // Reduced count
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
     const w = 2 + Math.random() * 4;
     const h = 50 + Math.random() * 200;
     
@@ -577,9 +576,9 @@ for(let i=0; i<5000; i++) {
 }
 
 // 3. Moss & Lichen (Greenish Patches)
-for(let i=0; i<200; i++) {
-    const x = Math.random() * 1024;
-    const y = Math.random() * 1024;
+for(let i=0; i<100; i++) { // Reduced count
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
     const r = 20 + Math.random() * 60;
     
     const grad = bCtx.createRadialGradient(x, y, 0, x, y, r);
@@ -593,10 +592,10 @@ for(let i=0; i<200; i++) {
 }
 
 // 4. Horizontal Cracks
-for(let i=0; i<1000; i++) {
+for(let i=0; i<500; i++) { // Reduced count
     bCtx.fillStyle = '#0f0805';
-    const x = Math.random() * 1024;
-    const y = Math.random() * 1024;
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
     const w = 10 + Math.random() * 30;
     const h = 2 + Math.random() * 3;
     bCtx.fillRect(x, y, w, h);
@@ -609,18 +608,18 @@ barkTexture.repeat.set(2, 4); // Tiling agar detail terlihat tajam
 
 // Generate Leaf Texture (High Res Foliage)
 const leafCanvas = document.createElement('canvas');
-leafCanvas.width = 512;
-leafCanvas.height = 512;
+leafCanvas.width = 256; // Optimized (512 -> 256)
+leafCanvas.height = 256;
 const lCtx = leafCanvas.getContext('2d');
 
 // 1. Base Dark Background (Deep Shadow)
 lCtx.fillStyle = '#051005';
-lCtx.fillRect(0, 0, 512, 512);
+lCtx.fillRect(0, 0, 256, 256);
 
 // 2. Draw Thousands of Leaves
-for(let i=0; i<3000; i++) {
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
+for(let i=0; i<1500; i++) { // Reduced count
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
     const size = 8 + Math.random() * 12;
     const angle = Math.random() * Math.PI * 2;
     
@@ -668,21 +667,14 @@ leafTexture.wrapS = THREE.RepeatWrapping;
 leafTexture.wrapT = THREE.RepeatWrapping;
 
 // Shared Materials (Optimization)
-const sharedTrunkMat = new THREE.MeshStandardMaterial({ 
+const sharedTrunkMat = new THREE.MeshLambertMaterial({ // Optimized Material
     color: 0x6d4c41, 
-    map: barkTexture,
-    roughness: 0.9, 
-    bumpMap: barkTexture,
-    bumpScale: 0.3,
-    metalness: 0.1
+    map: barkTexture
 });
 
-const sharedLeavesMat = new THREE.MeshStandardMaterial({ 
+const sharedLeavesMat = new THREE.MeshLambertMaterial({ // Optimized Material
     map: leafTexture,
     color: 0xbbbbbb, 
-    roughness: 0.8,
-    bumpMap: leafTexture, 
-    bumpScale: 0.5, 
     side: THREE.DoubleSide,
     alphaTest: 0.3,
     transparent: false // MATIKAN TRANSPARANSI (Sorting killer)
@@ -924,22 +916,19 @@ if (allLeafGeometries.length > 0) {
 // Batu dekorasi (Improved Rock Material)
 // Texture noise untuk batu
 const rockCanvas = document.createElement('canvas');
-rockCanvas.width = 256;
-rockCanvas.height = 256;
+rockCanvas.width = 128; // Optimized (256 -> 128)
+rockCanvas.height = 128;
 const rCtx = rockCanvas.getContext('2d');
 rCtx.fillStyle = '#808080';
-rCtx.fillRect(0,0,256,256);
-for(let i=0; i<5000; i++) {
+rCtx.fillRect(0,0,128,128);
+for(let i=0; i<1000; i++) { // Reduced count
     rCtx.fillStyle = Math.random() > 0.5 ? '#606060' : '#a0a0a0';
-    rCtx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+    rCtx.fillRect(Math.random()*128, Math.random()*128, 2, 2);
 }
 const rockTexture = new THREE.CanvasTexture(rockCanvas);
 
-const rockMat = new THREE.MeshStandardMaterial({
+const rockMat = new THREE.MeshLambertMaterial({ // Optimized Material
     map: rockTexture,
-    roughness: 1.0, 
-    bumpMap: rockTexture,
-    bumpScale: 0.2, 
     color: 0x777777
 });
 
@@ -993,24 +982,24 @@ if (rockGeometries.length > 0) {
 
 // Texture untuk reruntuhan (Ancient Stone with Moss)
 const ruinCanvas = document.createElement('canvas');
-ruinCanvas.width = 512;
-ruinCanvas.height = 512;
+ruinCanvas.width = 256; // Optimized (512 -> 256)
+ruinCanvas.height = 256;
 const ruCtx = ruinCanvas.getContext('2d');
 
 // Base stone color
 ruCtx.fillStyle = '#5a5a5a';
-ruCtx.fillRect(0, 0, 512, 512);
+ruCtx.fillRect(0, 0, 256, 256);
 
 // Noise texture
-for(let i=0; i<10000; i++) {
+for(let i=0; i<2500; i++) { // Reduced count
     ruCtx.fillStyle = Math.random() > 0.5 ? '#4a4a4a' : '#6a6a6a';
-    ruCtx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
+    ruCtx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
 }
 
 // Moss patches (Greenish overlay)
-for(let i=0; i<50; i++) {
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
+for(let i=0; i<20; i++) { // Reduced count
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
     const r = 20 + Math.random() * 40;
     
     const grad = ruCtx.createRadialGradient(x, y, 0, x, y, r);
@@ -1024,11 +1013,8 @@ for(let i=0; i<50; i++) {
 }
 
 const ruinTexture = new THREE.CanvasTexture(ruinCanvas);
-const ruinMat = new THREE.MeshStandardMaterial({
+const ruinMat = new THREE.MeshLambertMaterial({ // Optimized Material
     map: ruinTexture,
-    roughness: 0.9,
-    bumpMap: ruinTexture,
-    bumpScale: 0.15,
     color: 0x888888
 });
 
