@@ -1572,7 +1572,9 @@ const playerState = {
   sprintSpeed: 25, // Kecepatan lari
   jumpHeight: 14, // Increased jump height for better platforming
   bobTimer: 0, // Untuk head bobbing
-  defaultCameraY: 2 // Tinggi mata default
+  defaultCameraY: 2, // Tinggi mata default
+  stepDistance: 0, // Accumulator for footsteps
+  lastCollisionTime: 0 // Cooldown for collision sound
 };
 
 // Keyboard controls
@@ -1655,6 +1657,11 @@ document.body.appendChild(blocker);
 
 document.getElementById("playBtn").addEventListener("click", () => {
   controls.lock();
+  // Play background music if not playing
+  if (!bgMusic.isPlaying && bgMusic.buffer) {
+      bgMusic.play();
+      musicBtn.innerText = "[1] Musik: ON";
+  }
 });
 
 controls.addEventListener("lock", () => {
@@ -1727,13 +1734,49 @@ const listener = new THREE.AudioListener();
 camera.add(listener);
 
 const bgMusic = new THREE.Audio(listener);
+const stepSound = new THREE.Audio(listener);
+const hitSound = new THREE.Audio(listener);
+
 const audioLoader = new THREE.AudioLoader();
 
+// 1. Background Music
 audioLoader.load("/gamelan-bali.mp3", (buffer) => {
   bgMusic.setBuffer(buffer);
   bgMusic.setLoop(true);
   bgMusic.setVolume(0.3);
 });
+
+// 2. Step Sound (Minecraft Style)
+audioLoader.load("/step.m4a", (buffer) => {
+  stepSound.setBuffer(buffer);
+  stepSound.setLoop(false);
+  stepSound.setVolume(1.2); // Volume ditingkatkan (Boosted)
+});
+
+// 3. Hit Sound (Minecraft Style)
+audioLoader.load("/hit.mp3", (buffer) => {
+  hitSound.setBuffer(buffer);
+  hitSound.setLoop(false);
+  hitSound.setVolume(0.2); // Volume dikurangi
+});
+
+function playStepSound() {
+    if (stepSound.buffer) {
+        if (stepSound.isPlaying) stepSound.stop(); // Stop old sound to prevent overlap chaos
+        // Randomize pitch slightly for realism (biar gak monoton)
+        stepSound.setDetune((Math.random() - 0.5) * 300); 
+        stepSound.play();
+    }
+}
+
+function playCollisionSound() {
+    if (hitSound.buffer) {
+        if (hitSound.isPlaying) hitSound.stop();
+        hitSound.play();
+    }
+}
+
+// Music toggle button
 
 // Music toggle button
 const musicBtn = document.createElement("button");
@@ -2067,6 +2110,13 @@ function animate() {
         // Kill velocity
         playerState.velocity.x = 0;
         playerState.velocity.z = 0;
+
+        // Play Collision Sound (with cooldown)
+        const now = Date.now();
+        if (now - playerState.lastCollisionTime > 400) { // 400ms cooldown
+            playCollisionSound();
+            playerState.lastCollisionTime = now;
+        }
     }
 
     // Gravity
@@ -2083,17 +2133,26 @@ function animate() {
       playerState.canJump = true;
     }
 
-    // --- HEAD BOBBING ---
+    // --- HEAD BOBBING & FOOTSTEPS ---
     if (playerState.canJump) {
         if (currentSpeed > 0.5) {
             // Walking Bobbing
             playerState.bobTimer += delta * 15; 
             const bobOffset = Math.sin(playerState.bobTimer) * 0.1;
             camera.position.y = groundHeight + 2.0 + Math.abs(bobOffset); 
+
+            // Footstep Sound
+            playerState.stepDistance += currentSpeed * delta;
+            const stepInterval = playerState.isSprinting ? 3.0 : 2.5; // Faster steps when sprinting
+            if (playerState.stepDistance > stepInterval) {
+                playStepSound();
+                playerState.stepDistance = 0;
+            }
         } else {
             // Idle - Reset height
             playerState.bobTimer = 0;
             camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundHeight + 2.0, delta * 10);
+            playerState.stepDistance = 2.0; // Reset so next step comes quickly
         }
     }
 
