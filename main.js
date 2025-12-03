@@ -27,6 +27,64 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+
+// =========================
+// PHYSICS & COLLISION SYSTEM (MINECRAFT STYLE)
+// =========================
+const worldColliders = []; // Array of THREE.Box3
+
+function addCollider(x, y, z, width, height, depth) {
+    const box = new THREE.Box3();
+    box.setFromCenterAndSize(
+        new THREE.Vector3(x, y + height / 2, z),
+        new THREE.Vector3(width, height, depth)
+    );
+    worldColliders.push(box);
+}
+
+// Helper to get ground height at position (for landing on objects)
+function getGroundHeight(x, z, currentY) {
+    let maxH = 0; // Base ground height (Visual Ground is at Y=0)
+    const playerRadius = 0.4; // Player width radius
+
+    // Check all colliders
+    for (const box of worldColliders) {
+        // Check if (x, z) is within the box's horizontal bounds (expanded by player radius)
+        if (x >= box.min.x - playerRadius && x <= box.max.x + playerRadius &&
+            z >= box.min.z - playerRadius && z <= box.max.z + playerRadius) {
+            
+            // Only consider boxes that are below the player's feet (plus a small step-up tolerance)
+            if (box.max.y <= currentY + 1.0 && box.max.y > maxH) {
+                maxH = box.max.y;
+            }
+        }
+    }
+    return maxH;
+}
+
+// Helper to check horizontal collision
+function checkHorizontalCollision(x, z, y) {
+    const playerRadius = 0.4;
+    const playerHeight = 2.0; // Match camera height
+    
+    // Player bounding box at new position
+    const playerMinX = x - playerRadius;
+    const playerMaxX = x + playerRadius;
+    const playerMinZ = z - playerRadius;
+    const playerMaxZ = z + playerRadius;
+    const playerMinY = y + 0.2; // Lift slightly to avoid floor friction
+    const playerMaxY = y + playerHeight;
+
+    for (const box of worldColliders) {
+        // Check overlap
+        if (playerMaxX > box.min.x && playerMinX < box.max.x &&
+            playerMaxZ > box.min.z && playerMinZ < box.max.z &&
+            playerMaxY > box.min.y && playerMinY < box.max.y) {
+            return true; // Collision detected
+        }
+    }
+    return false;
+}
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -913,6 +971,12 @@ for (let i = 0; i < 40; i++) { // Tambah jumlah pohon
     if (trunk) allTrunkGeometries.push(trunk);
     if (leaves) allLeafGeometries.push(leaves);
     treePositions.push({x, z});
+    
+    // Add Collider for Tree Trunk
+    // Trunk is roughly 1.5 wide and 8 high
+    addCollider(x, 0, z, 1.5, 8, 1.5);
+    // Add Collider for Canopy (Optional, for jumping on trees)
+    addCollider(x, 8, z, 5, 1, 5); 
   }
 }
 
@@ -984,6 +1048,10 @@ for (let i = 0; i < 30; i++) {
       rockGeom.translate(x, scale * 0.3, z);
       
       rockGeometries.push(rockGeom);
+
+      // Add Collider for Rock
+      // Box size based on scale
+      addCollider(x, 0, z, scale * 2, scale * 1.5, scale * 2);
   }
 }
 
@@ -1185,7 +1253,11 @@ for (let i = 0; i < 20; i++) {
   
   if (!onMainCross && !onPathZ40 && !onPathXMin40) {
     const geom = getRuinsGeometries(x, z);
-    if(geom) allRuinGeometries.push(geom);
+    if(geom) {
+        allRuinGeometries.push(geom);
+        // Add Collider for Ruin Column
+        addCollider(x, 0, z, 1.5, 4, 1.5);
+    }
   }
 }
 
@@ -1205,7 +1277,11 @@ function spawnRuinsAround(centerX, centerZ, count, radius) {
 
         if (!onMainCross && !onPathZ40 && !onPathXMin40) {
              const geom = getRuinsGeometries(x, z);
-             if(geom) allRuinGeometries.push(geom);
+             if(geom) {
+                 allRuinGeometries.push(geom);
+                 // Add Collider for Ruin Column
+                 addCollider(x, 0, z, 1.5, 4, 1.5);
+             }
         }
     }
 }
@@ -1290,6 +1366,10 @@ function loadBhutaKala() {
         
         scene.add(model);
         ogohOgohList.push(model);
+        
+        // Add Collider for Bhuta Kala Base
+        addCollider(x, 0, z, 6, 5, 6);
+        
         console.log("Bhuta Kala loaded");
     }, undefined, (err) => console.error("Error loading Bhuta Kala:", err));
 }
@@ -1348,6 +1428,10 @@ function loadKuwera() {
         
         scene.add(model);
         ogohOgohList.push(model);
+        
+        // Add Collider for Kuwera Base
+        addCollider(x, 0, z, 5, 4, 5);
+        
         console.log("Kuwera loaded");
     }, undefined, (err) => console.error("Error loading Kuwera:", err));
 }
@@ -1398,6 +1482,10 @@ function loadReog() {
         
         scene.add(model);
         ogohOgohList.push(model);
+        
+        // Add Collider for Reog Base
+        addCollider(x, 0, z, 6, 5, 6);
+        
         console.log("Reog loaded");
     }, undefined, (err) => console.error("Error loading Reog:", err));
 }
@@ -1415,7 +1503,7 @@ function loadRangda() {
     loader.load('patung-rangda.glb', (gltf) => {
         const model = gltf.scene;
         model.position.set(x, yPos, z);
-        model.scale.set(10, 10, 10); // Diperbesar dari 3 ke 10
+        model.scale.set(6, 6, 6); // Diperbesar dari 3 ke 10
         
         // Check & Play Animation
         if (gltf.animations && gltf.animations.length > 0) {
@@ -1448,6 +1536,10 @@ function loadRangda() {
         
         scene.add(model);
         ogohOgohList.push(model);
+        
+        // Add Collider for Rangda Base
+        addCollider(x, 0, z, 6, 5, 6);
+        
         console.log("Rangda loaded");
     }, undefined, (err) => console.error("Error loading Rangda:", err));
 }
@@ -1954,19 +2046,35 @@ function animate() {
         playerState.velocity.z *= ratio;
     }
 
-    // Apply movement
+    // Apply movement (With Collision Check)
+    const oldX = camera.position.x;
+    const oldZ = camera.position.z;
+
     controls.moveRight(-playerState.velocity.x * delta);
     controls.moveForward(-playerState.velocity.z * delta);
+
+    // Check Horizontal Collision
+    // Player feet position is camera.y - 2.0 (assuming eye height 2.0)
+    if (checkHorizontalCollision(camera.position.x, camera.position.z, camera.position.y - 2.0)) {
+        // Revert position if hit wall
+        camera.position.x = oldX;
+        camera.position.z = oldZ;
+        // Kill velocity
+        playerState.velocity.x = 0;
+        playerState.velocity.z = 0;
+    }
 
     // Gravity
     playerState.velocity.y -= 9.8 * 2.0 * delta; // Gravity
     camera.position.y += playerState.velocity.y * delta;
 
-    // Floor collision (Simple flat ground)
-    const groundHeight = 2;
-    if (camera.position.y < groundHeight) {
+    // Floor collision (Minecraft Style)
+    const playerFeetY = camera.position.y - 2.0;
+    const groundHeight = getGroundHeight(camera.position.x, camera.position.z, playerFeetY);
+    
+    if (playerFeetY < groundHeight) {
       playerState.velocity.y = 0;
-      camera.position.y = groundHeight;
+      camera.position.y = groundHeight + 2.0;
       playerState.canJump = true;
     }
 
@@ -1976,11 +2084,11 @@ function animate() {
             // Walking Bobbing
             playerState.bobTimer += delta * 15; 
             const bobOffset = Math.sin(playerState.bobTimer) * 0.1;
-            camera.position.y = groundHeight + Math.abs(bobOffset); 
+            camera.position.y = groundHeight + 2.0 + Math.abs(bobOffset); 
         } else {
             // Idle - Reset height
             playerState.bobTimer = 0;
-            camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundHeight, delta * 10);
+            camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundHeight + 2.0, delta * 10);
         }
     }
 
