@@ -529,121 +529,257 @@ function createGrass() {
 createGrass();
 
 // Pohon sederhana (Improved Procedural Tree with Bark Texture)
-// Generate Bark Texture (High Res)
+// Generate Bark Texture (High Res & Realistic)
 const barkCanvas = document.createElement('canvas');
-barkCanvas.width = 512;
+barkCanvas.width = 1024;
 barkCanvas.height = 1024;
 const bCtx = barkCanvas.getContext('2d');
-bCtx.fillStyle = '#3e2723';
-bCtx.fillRect(0,0,512,1024);
 
-// Vertical streaks for bark (Deep grooves)
-for(let i=0; i<3000; i++) {
-    bCtx.fillStyle = Math.random() > 0.5 ? '#2d1b15' : '#4e342e';
-    const x = Math.random() * 512;
+// 1. Base Noise (Organic Brown)
+bCtx.fillStyle = '#3e2723';
+bCtx.fillRect(0,0,1024,1024);
+
+// Helper for noise
+function noise(ctx, width, height, density, color, sizeMin, sizeMax) {
+    ctx.fillStyle = color;
+    for(let i=0; i<density; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const w = sizeMin + Math.random() * (sizeMax - sizeMin);
+        const h = sizeMin + Math.random() * (sizeMax - sizeMin);
+        ctx.fillRect(x, y, w, h);
+    }
+}
+
+// 2. Deep Grooves (Vertical Striations)
+for(let i=0; i<5000; i++) {
+    const x = Math.random() * 1024;
     const y = Math.random() * 1024;
-    const w = 2 + Math.random() * 6;
-    const h = 30 + Math.random() * 80;
+    const w = 2 + Math.random() * 4;
+    const h = 50 + Math.random() * 200;
+    
+    // Gradient for depth
+    const grad = bCtx.createLinearGradient(x, y, x+w, y);
+    grad.addColorStop(0, '#1a100c'); // Shadow
+    grad.addColorStop(0.5, '#2d1b15');
+    grad.addColorStop(1, '#1a100c');
+    
+    bCtx.fillStyle = grad;
     bCtx.fillRect(x, y, w, h);
 }
 
-// Add horizontal cracks
-for(let i=0; i<500; i++) {
-    bCtx.fillStyle = '#1a100c';
-    const x = Math.random() * 512;
+// 3. Moss & Lichen (Greenish Patches)
+for(let i=0; i<200; i++) {
+    const x = Math.random() * 1024;
     const y = Math.random() * 1024;
-    const w = 10 + Math.random() * 20;
-    const h = 2 + Math.random() * 2;
+    const r = 20 + Math.random() * 60;
+    
+    const grad = bCtx.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, 'rgba(60, 80, 40, 0.4)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    
+    bCtx.fillStyle = grad;
+    bCtx.beginPath();
+    bCtx.arc(x, y, r, 0, Math.PI*2);
+    bCtx.fill();
+}
+
+// 4. Horizontal Cracks
+for(let i=0; i<1000; i++) {
+    bCtx.fillStyle = '#0f0805';
+    const x = Math.random() * 1024;
+    const y = Math.random() * 1024;
+    const w = 10 + Math.random() * 30;
+    const h = 2 + Math.random() * 3;
     bCtx.fillRect(x, y, w, h);
 }
 
 const barkTexture = new THREE.CanvasTexture(barkCanvas);
 barkTexture.wrapS = THREE.RepeatWrapping;
 barkTexture.wrapT = THREE.RepeatWrapping;
+barkTexture.repeat.set(2, 4); // Tiling agar detail terlihat tajam
 
-// Pohon Beringin (Banyan Tree) - Lebih cocok untuk tema Candi/Nusantara
+// Pohon Beringin (Banyan Tree) - Realistic Procedural
 function createTree(x, z) {
   const treeGroup = new THREE.Group();
   treeGroup.position.set(x, 0, z);
 
-  // Randomize size slightly
-  const scale = 1 + Math.random() * 0.5;
+  // Randomize size
+  const scale = 1.5 + Math.random() * 1.0; // Lebih besar dan megah
   treeGroup.scale.set(scale, scale, scale);
 
-  // 1. Batang Utama (Trunk) - Besar dan kokoh
-  const trunkGeom = new THREE.CylinderGeometry(1.2, 1.5, 5, 10);
+  // Materials (Production Level)
   const trunkMat = new THREE.MeshStandardMaterial({ 
-      color: 0x4a3c31, // Dark wood color
+      color: 0x6d4c41, // Sedikit lebih terang agar tekstur terlihat
       map: barkTexture,
-      roughness: 0.9,
+      roughness: 0.8, // Kayu tidak terlalu mengkilap
       bumpMap: barkTexture,
-      bumpScale: 0.2
+      bumpScale: 0.15, // Detail tekstur fisik
+      metalness: 0.1
   });
-  const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-  trunk.position.y = 2.5;
-  trunk.castShadow = true;
-  trunk.receiveShadow = true;
-  treeGroup.add(trunk);
 
-  // 2. Akar Gantung (Aerial Roots) - Ciri khas Beringin
-  const rootCount = 4 + Math.floor(Math.random() * 4);
+  const leavesMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1b5e20, // Hijau tua
+      roughness: 0.6,
+      side: THREE.DoubleSide,
+      flatShading: false
+  });
+
+  // 1. Main Trunk (Fused Roots System)
+  const trunkHeight = 3.5 + Math.random();
+  const trunkRadius = 0.6 + Math.random() * 0.4;
+  
+  // Central core (invisible or inner support)
+  const coreGeom = new THREE.CylinderGeometry(trunkRadius * 0.8, trunkRadius, trunkHeight, 8);
+  const core = new THREE.Mesh(coreGeom, trunkMat);
+  core.position.y = trunkHeight / 2;
+  core.castShadow = true;
+  core.receiveShadow = true;
+  treeGroup.add(core);
+
+  // Surrounding roots (Strangler effect - Batang berotot)
+  const rootCount = 5 + Math.floor(Math.random() * 4);
   for(let i=0; i<rootCount; i++) {
-      const rootGeom = new THREE.CylinderGeometry(0.1, 0.2, 4.5, 5);
+      const r = 0.15 + Math.random() * 0.2;
+      const h = trunkHeight * (0.9 + Math.random() * 0.2);
+      const rootGeom = new THREE.CylinderGeometry(r, r + 0.15, h, 5);
+      
+      // Wiggle the root vertices for organic look
+      const posAttribute = rootGeom.attributes.position;
+      for(let v=0; v<posAttribute.count; v++){
+          const y = posAttribute.getY(v);
+          const wiggleX = Math.sin(y * 3) * 0.1;
+          const wiggleZ = Math.cos(y * 2) * 0.1;
+          posAttribute.setX(v, posAttribute.getX(v) + wiggleX);
+          posAttribute.setZ(v, posAttribute.getZ(v) + wiggleZ);
+      }
+      rootGeom.computeVertexNormals();
+
       const root = new THREE.Mesh(rootGeom, trunkMat);
       
-      // Position around the trunk
-      const angle = (i / rootCount) * Math.PI * 2 + Math.random();
-      const dist = 1.0 + Math.random() * 0.5;
-      root.position.set(Math.cos(angle) * dist, 2.25, Math.sin(angle) * dist);
+      const angle = (i / rootCount) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = trunkRadius * (0.7 + Math.random() * 0.3);
       
-      // Miringkan sedikit agar terlihat natural
-      root.rotation.x = (Math.random() - 0.5) * 0.2;
-      root.rotation.z = (Math.random() - 0.5) * 0.2;
+      root.position.set(Math.cos(angle) * dist, h/2, Math.sin(angle) * dist);
       
+      // Random tilt
+      root.rotation.set(
+          (Math.random()-0.5)*0.15, 
+          Math.random()*Math.PI, 
+          (Math.random()-0.5)*0.15
+      );
+
       root.castShadow = true;
       treeGroup.add(root);
   }
 
-  // 3. Dedaunan (Canopy) - Rimbun dan Melebar (Dome shape)
-  const leavesMat = new THREE.MeshStandardMaterial({ 
-      color: 0x0f3d0f, // Darker green for banyan
-      roughness: 0.8,
-      side: THREE.DoubleSide
-  });
+  // 2. Branches (Spreading wide)
+  const branchCount = 5 + Math.floor(Math.random() * 3);
+  const branchGroup = new THREE.Group();
+  branchGroup.position.y = trunkHeight * 0.85;
+  treeGroup.add(branchGroup);
 
-  // Buat beberapa sphere/dome untuk membentuk kanopi yang rimbun
-  const canopyGroup = new THREE.Group();
-  canopyGroup.position.y = 5;
-
-  // Main dome
-  const mainFoliage = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(3.5, 1),
-      leavesMat
-  );
-  mainFoliage.scale.y = 0.6; // Flatten slightly
-  mainFoliage.castShadow = true;
-  mainFoliage.receiveShadow = true;
-  canopyGroup.add(mainFoliage);
-
-  // Side clusters
-  const clusterCount = 6;
-  for(let i=0; i<clusterCount; i++) {
-      const cluster = new THREE.Mesh(
-          new THREE.IcosahedronGeometry(2 + Math.random(), 0),
-          leavesMat
-      );
-      const angle = (i / clusterCount) * Math.PI * 2;
-      const dist = 2.5 + Math.random();
-      const yOffset = (Math.random() - 0.5) * 1.5;
+  for(let i=0; i<branchCount; i++) {
+      const angle = (i / branchCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const length = 4 + Math.random() * 3;
+      const thickness = 0.35;
       
-      cluster.position.set(Math.cos(angle) * dist, yOffset, Math.sin(angle) * dist);
-      cluster.scale.y = 0.7;
-      cluster.castShadow = true;
-      cluster.receiveShadow = true;
-      canopyGroup.add(cluster);
-  }
+      // Branch Geometry
+      const branchGeom = new THREE.CylinderGeometry(0.08, thickness, length, 5);
+      branchGeom.translate(0, length/2, 0);
+      branchGeom.rotateX(Math.PI / 2); // Point along Z
+      
+      const branch = new THREE.Mesh(branchGeom, trunkMat);
+      branch.rotation.y = angle;
+      const liftAngle = -0.1 - Math.random() * 0.3; // Lift up slightly
+      branch.rotation.x = liftAngle; 
+      
+      branch.castShadow = true;
+      branchGroup.add(branch);
 
-  treeGroup.add(canopyGroup);
+      // 3. Leaf Clusters (Foliage)
+      // Add multiple clumps along the branch
+      const clumps = 4 + Math.floor(Math.random() * 3);
+      for(let j=0; j<clumps; j++) {
+          const t = 0.3 + (j/clumps) * 0.7; // Distribute along outer part
+          const clumpSize = 1.0 + Math.random() * 0.8;
+          
+          // Use Dodecahedron for leafy look
+          const leafGeom = new THREE.DodecahedronGeometry(clumpSize, 0);
+          const leaf = new THREE.Mesh(leafGeom, leavesMat);
+          
+          // Position relative to branch (Local Z is length)
+          leaf.position.set(
+              (Math.random()-0.5)*1.5, 
+              (Math.random()-0.5)*1.0 + 0.5, // Slightly above branch
+              length * t
+          );
+          
+          // Random rotation
+          leaf.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+          
+          leaf.castShadow = true;
+          leaf.receiveShadow = true;
+          branch.add(leaf);
+      }
+      
+      // 4. Aerial Roots (Hanging from branches to ground)
+      // SMART CHECK: Only spawn if not blocking path
+      const rootDrops = 1 + Math.floor(Math.random() * 3);
+      for(let r=0; r<rootDrops; r++) {
+          const t = 0.4 + Math.random() * 0.5;
+          const dist = length * t;
+          
+          // Calculate world position of the drop point
+          // Horizontal distance from center
+          const hDist = dist * Math.cos(liftAngle);
+          
+          const rX_local = Math.sin(angle) * hDist;
+          const rZ_local = Math.cos(angle) * hDist;
+          
+          // World Pos
+          const worldX = x + rX_local * scale;
+          const worldZ = z + rZ_local * scale;
+          
+          // PATH COLLISION CHECK
+          const onMainCross = Math.abs(worldX) < 5 || Math.abs(worldZ) < 5;
+          const onPathZ40 = Math.abs(worldZ - 40) < 5;
+          const onPathXMin40 = Math.abs(worldX + 40) < 5;
+          
+          if (onMainCross || onPathZ40 || onPathXMin40) {
+              continue; // SKIP this root if it lands on path
+          }
+
+          // Height at that point
+          const rY = (trunkHeight * 0.85) + (dist * Math.sin(-liftAngle)); 
+          
+          // Create root
+          const rootH = rY; // Reach ground
+          if (rootH > 0.5) {
+              const aGeom = new THREE.CylinderGeometry(0.03, 0.05, rootH, 3);
+              aGeom.translate(0, rootH/2, 0); // Pivot at bottom (ground)
+              const aRoot = new THREE.Mesh(aGeom, trunkMat);
+              
+              // Add some randomness to position
+              aRoot.position.set(
+                  rX_local + (Math.random()-0.5)*0.5, 
+                  0, 
+                  rZ_local + (Math.random()-0.5)*0.5
+              );
+              
+              aRoot.castShadow = true;
+              treeGroup.add(aRoot);
+          }
+      }
+  }
+  
+  // Top Canopy (Cover the center hole)
+  const topGeom = new THREE.DodecahedronGeometry(2.5, 0);
+  const top = new THREE.Mesh(topGeom, leavesMat);
+  top.position.y = trunkHeight + 1;
+  top.castShadow = true;
+  treeGroup.add(top);
+
   scene.add(treeGroup);
 }
 
@@ -656,11 +792,14 @@ for (let i = 0; i < 40; i++) { // Tambah jumlah pohon
   const z = (Math.random() - 0.5) * 160;
   
   // Hindari area tengah (jalan) - expanded exclusion zone
+  // Tree radius can be up to ~10 units with branches
+  const safeZone = 12; 
+  
   // Check main cross
-  const onMainCross = Math.abs(x) < 6 || Math.abs(z) < 6;
+  const onMainCross = Math.abs(x) < safeZone || Math.abs(z) < safeZone;
   // Check additional paths
-  const onPathZ40 = Math.abs(z - 40) < 6;
-  const onPathXMin40 = Math.abs(x + 40) < 6;
+  const onPathZ40 = Math.abs(z - 40) < safeZone;
+  const onPathXMin40 = Math.abs(x + 40) < safeZone;
   
   if (!onMainCross && !onPathZ40 && !onPathXMin40) {
     createTree(x, z);
