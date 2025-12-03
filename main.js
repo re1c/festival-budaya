@@ -1303,7 +1303,7 @@ camera.add(listener);
 const bgMusic = new THREE.Audio(listener);
 const audioLoader = new THREE.AudioLoader();
 
-audioLoader.load("/reog-music.mp3", (buffer) => {
+audioLoader.load("/gamelan-bali.mp3", (buffer) => {
   bgMusic.setBuffer(buffer);
   bgMusic.setLoop(true);
   bgMusic.setVolume(0.3);
