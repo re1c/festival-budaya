@@ -310,8 +310,16 @@ for ( let i = 0; i < posAttribute.count; i ++ ) {
     // Flatten logic
     const minDist = Math.min(distToX, distToY);
     
-    if (minDist < pathWidth + blendWidth) {
-        const factor = Math.max(0, (minDist - pathWidth) / blendWidth); // 0 at path, 1 at outside
+    // Check additional paths
+    // NOTE: y in PlaneGeometry (rotated -90 x) corresponds to -z in world space.
+    // So if path is at z=40, we need y=-40. |y - (-40)| = |y + 40|.
+    const distToZ40 = Math.abs(y + 40); // Horizontal path at Z=40
+    const distToXMin40 = Math.abs(x + 40); // Vertical path at X=-40
+    
+    const finalMinDist = Math.min(minDist, distToZ40, distToXMin40);
+
+    if (finalMinDist < pathWidth + blendWidth) {
+        const factor = Math.max(0, (finalMinDist - pathWidth) / blendWidth); // 0 at path, 1 at outside
         // Smoothstep for better blending
         const smoothFactor = factor * factor * (3 - 2 * factor);
         
@@ -472,7 +480,12 @@ function createGrass() {
         const z = (Math.random() - 0.5) * 190;
         
         // Avoid road area
-        if(Math.abs(x) < 4 || Math.abs(z) < 4) continue; 
+        // Main Cross
+        if(Math.abs(x) < 4 || Math.abs(z) < 4) continue;
+        // Path at Z=40
+        if(Math.abs(z - 40) < 4) continue;
+        // Path at X=-40
+        if(Math.abs(x + 40) < 4) continue;
 
         dummy.position.set(x, 0, z);
         
@@ -483,11 +496,18 @@ function createGrass() {
         const distToX = Math.abs(z);
         const distToY = Math.abs(x);
         const minDist = Math.min(distToX, distToY);
+        
+        // Check additional paths
+        const distToZ40 = Math.abs(z - 40); // Horizontal path at Z=40
+        const distToXMin40 = Math.abs(x + 40); // Vertical path at X=-40
+        
+        const finalMinDist = Math.min(minDist, distToZ40, distToXMin40);
+
         const pathWidth = 3.0;
         const blendWidth = 4.0;
         
-        if (minDist < pathWidth + blendWidth) {
-             const factor = Math.max(0, (minDist - pathWidth) / blendWidth);
+        if (finalMinDist < pathWidth + blendWidth) {
+             const factor = Math.max(0, (finalMinDist - pathWidth) / blendWidth);
              const smoothFactor = factor * factor * (3 - 2 * factor);
              terrainHeight = THREE.MathUtils.lerp(0.05, terrainHeight, smoothFactor);
         }
@@ -634,8 +654,15 @@ const treePositions = [];
 for (let i = 0; i < 40; i++) { // Tambah jumlah pohon
   const x = (Math.random() - 0.5) * 160;
   const z = (Math.random() - 0.5) * 160;
+  
   // Hindari area tengah (jalan) - expanded exclusion zone
-  if (Math.abs(x) > 15 && Math.abs(z) > 15) {
+  // Check main cross
+  const onMainCross = Math.abs(x) < 6 || Math.abs(z) < 6;
+  // Check additional paths
+  const onPathZ40 = Math.abs(z - 40) < 6;
+  const onPathXMin40 = Math.abs(x + 40) < 6;
+  
+  if (!onMainCross && !onPathZ40 && !onPathXMin40) {
     createTree(x, z);
     treePositions.push({x, z});
   }
@@ -688,8 +715,15 @@ function createRock(x, z, scale = 1) {
 for (let i = 0; i < 30; i++) { // Tambah jumlah batu
   const x = (Math.random() - 0.5) * 120;
   const z = (Math.random() - 0.5) * 120;
+  
   // Hindari area tengah (jalan)
-  if (Math.abs(x) > 15 && Math.abs(z) > 15) {
+  // Check main cross
+  const onMainCross = Math.abs(x) < 6 || Math.abs(z) < 6;
+  // Check additional paths
+  const onPathZ40 = Math.abs(z - 40) < 6;
+  const onPathXMin40 = Math.abs(x + 40) < 6;
+  
+  if (!onMainCross && !onPathZ40 && !onPathXMin40) {
     createRock(x, z, 0.5 + Math.random() * 1.0);
   }
 }
