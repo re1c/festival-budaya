@@ -226,22 +226,58 @@ function resetSpark(spark, x, y, z) {
 // Texture Loader
 const textureLoader = new THREE.TextureLoader();
 
-// Procedural Grid Texture untuk tanah (biar tidak polos)
+// Procedural Grid Texture untuk tanah (Seamless & Natural)
 const canvas = document.createElement('canvas');
-canvas.width = 512;
-canvas.height = 512;
+canvas.width = 1024;
+canvas.height = 1024;
 const context = canvas.getContext('2d');
-context.fillStyle = '#1a2a1a'; // Base dark green
-context.fillRect(0, 0, 512, 512);
-// Add noise
-for(let i=0; i<50000; i++) {
-    context.fillStyle = Math.random() > 0.5 ? '#2a3a2a' : '#152015';
-    context.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+
+// 1. Base Layer (Dark Soil)
+context.fillStyle = '#1a1510'; 
+context.fillRect(0, 0, 1024, 1024);
+
+// Helper for seamless drawing
+function drawSeamlessSpot(x, y, radius) {
+    const draw = (cx, cy) => {
+        const gradient = context.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        gradient.addColorStop(0, 'rgba(40, 60, 40, 0.4)'); // Soft Greenish
+        gradient.addColorStop(1, 'rgba(40, 60, 40, 0)');
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(cx, cy, radius, 0, Math.PI * 2);
+        context.fill();
+    };
+    
+    // Draw center and wrapped versions
+    draw(x, y);
+    draw(x + 1024, y);
+    draw(x - 1024, y);
+    draw(x, y + 1024);
+    draw(x, y - 1024);
+    draw(x + 1024, y + 1024);
+    draw(x - 1024, y - 1024);
+    draw(x + 1024, y - 1024);
+    draw(x - 1024, y + 1024);
 }
+
+// 2. Large Noise Patches (Grass/Moss) - Seamless
+for(let i=0; i<80; i++) { // More patches for better coverage
+    const x = Math.random() * 1024;
+    const y = Math.random() * 1024;
+    const radius = 100 + Math.random() * 150; // Larger patches
+    drawSeamlessSpot(x, y, radius);
+}
+
+// 3. Small Noise (Dirt Detail)
+for(let i=0; i<150000; i++) {
+    context.fillStyle = Math.random() > 0.5 ? '#2a2015' : '#0f0a05';
+    context.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
+}
+
 const groundTexture = new THREE.CanvasTexture(canvas);
 groundTexture.wrapS = THREE.RepeatWrapping;
 groundTexture.wrapT = THREE.RepeatWrapping;
-groundTexture.repeat.set(50, 50);
+groundTexture.repeat.set(16, 16); // Reduced repeat to minimize tiling pattern visibility
 
 // Ground - tanah luas
 const groundGeom = new THREE.PlaneGeometry(200, 200, 128, 128); // Lebih detail vertices
@@ -336,38 +372,68 @@ function createPath() {
 }
 createPath();
 
-// INSTANCED GRASS (High Performance Vegetation)
+// INSTANCED GRASS (High Performance Vegetation with Wind Animation)
+let grassMaterial; // Global variable for animation
+
 function createGrass() {
-    const grassCount = 10000;
+    const grassCount = 15000; // Increased density
     const dummy = new THREE.Object3D();
     
-    // Simple blade geometry
-    const geometry = new THREE.ConeGeometry(0.05, 0.5, 2);
-    geometry.translate(0, 0.25, 0); // Pivot at bottom
+    // Geometry: 2 planes intersecting for better volume from all angles
+    // Or simple cone. Cone is good for low poly. Let's stick to Cone but thinner.
+    const geometry = new THREE.ConeGeometry(0.05, 0.6, 3); // Slightly taller
+    geometry.translate(0, 0.3, 0); // Pivot at bottom
     
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x2a4a2a,
+    grassMaterial = new THREE.MeshStandardMaterial({
+        color: 0x3a5a3a, // Slightly fresher green
         roughness: 0.8,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        onBeforeCompile: (shader) => {
+            shader.uniforms.time = { value: 0 };
+            
+            shader.vertexShader = `
+                uniform float time;
+            ` + shader.vertexShader;
+            
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `
+                #include <begin_vertex>
+                
+                // Wind Animation
+                float windFreq = 1.5;
+                float windAmp = 0.15;
+                float windWave = sin(time * windFreq + position.x * 0.5 + position.z * 0.3);
+                
+                // Bend factor increases with height (y)
+                float bend = max(0.0, position.y); 
+                
+                transformed.x += windWave * windAmp * bend;
+                transformed.z += windWave * windAmp * bend * 0.5;
+                `
+            );
+            
+            grassMaterial.userData.shader = shader;
+        }
     });
     
-    const grassMesh = new THREE.InstancedMesh(geometry, material, grassCount);
+    const grassMesh = new THREE.InstancedMesh(geometry, grassMaterial, grassCount);
     grassMesh.receiveShadow = true;
+    grassMesh.castShadow = true; // Grass casting shadow adds depth
     
     for(let i=0; i<grassCount; i++) {
-        const x = (Math.random() - 0.5) * 180;
-        const z = (Math.random() - 0.5) * 180;
+        const x = (Math.random() - 0.5) * 190;
+        const z = (Math.random() - 0.5) * 190;
         
-        // Avoid road area (simple check)
-        if(Math.abs(x) < 4 || Math.abs(z) < 4) continue; // Lebarkan area bebas rumput
+        // Avoid road area
+        if(Math.abs(x) < 4 || Math.abs(z) < 4) continue; 
 
         dummy.position.set(x, 0, z);
         
-        // Adjust height based on terrain (approximate)
-        // Harus sama dengan rumus terrain di atas
+        // Adjust height based on terrain
         let terrainHeight = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 0.5 + Math.random() * 0.2;
         
-        // Flatten logic for grass placement (biar gak melayang di pinggir jalan)
+        // Flatten logic
         const distToX = Math.abs(z);
         const distToY = Math.abs(x);
         const minDist = Math.min(distToX, distToY);
@@ -384,9 +450,9 @@ function createGrass() {
         
         dummy.rotation.y = Math.random() * Math.PI;
         
-        // Random scale
-        const s = 0.5 + Math.random() * 0.5;
-        dummy.scale.set(s, s * (1 + Math.random()), s);
+        // Random scale variation
+        const s = 0.6 + Math.random() * 0.6;
+        dummy.scale.set(s, s * (0.8 + Math.random() * 0.5), s);
         
         dummy.updateMatrix();
         grassMesh.setMatrixAt(i, dummy.matrix);
@@ -396,7 +462,28 @@ function createGrass() {
 }
 createGrass();
 
-// Pohon sederhana (Improved Procedural Tree)
+// Pohon sederhana (Improved Procedural Tree with Bark Texture)
+// Generate Bark Texture
+const barkCanvas = document.createElement('canvas');
+barkCanvas.width = 256;
+barkCanvas.height = 512;
+const bCtx = barkCanvas.getContext('2d');
+bCtx.fillStyle = '#3e2723';
+bCtx.fillRect(0,0,256,512);
+
+// Vertical streaks for bark
+for(let i=0; i<1000; i++) {
+    bCtx.fillStyle = Math.random() > 0.5 ? '#2d1b15' : '#4e342e';
+    const x = Math.random() * 256;
+    const y = Math.random() * 512;
+    const w = 2 + Math.random() * 4;
+    const h = 20 + Math.random() * 40;
+    bCtx.fillRect(x, y, w, h);
+}
+const barkTexture = new THREE.CanvasTexture(barkCanvas);
+barkTexture.wrapS = THREE.RepeatWrapping;
+barkTexture.wrapT = THREE.RepeatWrapping;
+
 function createTree(x, z) {
   const treeGroup = new THREE.Group();
   treeGroup.position.set(x, 0, z);
@@ -404,8 +491,10 @@ function createTree(x, z) {
   // Trunk (Batang) - Lebih detail
   const trunkGeom = new THREE.CylinderGeometry(0.4, 0.6, 4, 8);
   const trunkMat = new THREE.MeshStandardMaterial({ 
-      color: 0x3e2723,
-      roughness: 0.9 
+      map: barkTexture,
+      roughness: 1.0,
+      bumpMap: barkTexture,
+      bumpScale: 0.1
   });
   const trunk = new THREE.Mesh(trunkGeom, trunkMat);
   trunk.position.y = 2;
@@ -1004,6 +1093,14 @@ function animate() {
           resetSpark(p.mesh, p.baseX, p.baseY, p.baseZ);
       }
   });
+
+  // 4. Grass Wind Animation
+  if (grassMaterial && grassMaterial.userData.shader) {
+      grassMaterial.userData.shader.uniforms.time.value = time;
+  }
+
+  // RENDER DENGAN POST-PROCESSING
+  composer.render();
 
   // RENDER DENGAN POST-PROCESSING
   composer.render();
