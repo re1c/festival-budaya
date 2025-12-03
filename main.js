@@ -599,6 +599,86 @@ barkTexture.wrapS = THREE.RepeatWrapping;
 barkTexture.wrapT = THREE.RepeatWrapping;
 barkTexture.repeat.set(2, 4); // Tiling agar detail terlihat tajam
 
+// Generate Leaf Texture (High Res Foliage)
+const leafCanvas = document.createElement('canvas');
+leafCanvas.width = 512;
+leafCanvas.height = 512;
+const lCtx = leafCanvas.getContext('2d');
+
+// 1. Base Dark Background (Deep Shadow)
+lCtx.fillStyle = '#051005';
+lCtx.fillRect(0, 0, 512, 512);
+
+// 2. Draw Thousands of Leaves
+for(let i=0; i<3000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    const size = 8 + Math.random() * 12;
+    const angle = Math.random() * Math.PI * 2;
+    
+    lCtx.save();
+    lCtx.translate(x, y);
+    lCtx.rotate(angle);
+    
+    // Leaf Shape (Ellipse)
+    lCtx.beginPath();
+    lCtx.ellipse(0, 0, size, size * 0.4, 0, 0, Math.PI*2);
+    
+    // Color Variation (Rich Greens)
+    const type = Math.random();
+    let color;
+    if (type < 0.6) {
+        // Main Green
+        const g = 60 + Math.floor(Math.random() * 60);
+        color = `rgba(20, ${g}, 20, 0.9)`;
+    } else if (type < 0.9) {
+        // Darker/Older
+        const g = 30 + Math.floor(Math.random() * 30);
+        color = `rgba(10, ${g}, 10, 0.9)`;
+    } else {
+        // Fresh/Highlight
+        const g = 100 + Math.floor(Math.random() * 50);
+        color = `rgba(50, ${g}, 30, 0.9)`;
+    }
+    
+    lCtx.fillStyle = color;
+    lCtx.fill();
+    
+    // Leaf Vein (Detail)
+    lCtx.beginPath();
+    lCtx.moveTo(-size, 0);
+    lCtx.lineTo(size, 0);
+    lCtx.strokeStyle = 'rgba(0,0,0,0.3)';
+    lCtx.lineWidth = 1;
+    lCtx.stroke();
+    
+    lCtx.restore();
+}
+
+const leafTexture = new THREE.CanvasTexture(leafCanvas);
+leafTexture.wrapS = THREE.RepeatWrapping;
+leafTexture.wrapT = THREE.RepeatWrapping;
+
+// Shared Materials (Optimization)
+const sharedTrunkMat = new THREE.MeshStandardMaterial({ 
+    color: 0x6d4c41, 
+    map: barkTexture,
+    roughness: 0.9, 
+    bumpMap: barkTexture,
+    bumpScale: 0.3,
+    metalness: 0.1
+});
+
+const sharedLeavesMat = new THREE.MeshStandardMaterial({ 
+    map: leafTexture,
+    color: 0xbbbbbb, // Tint base texture slightly
+    roughness: 0.8,
+    bumpMap: leafTexture, // Use texture for depth
+    bumpScale: 0.5, // Deep texture
+    side: THREE.DoubleSide,
+    alphaTest: 0.3 // Cutout for sharper edges if we had alpha, but keeps it solid here
+});
+
 // Pohon Beringin (Banyan Tree) - Realistic Procedural
 function createTree(x, z) {
   const treeGroup = new THREE.Group();
@@ -608,30 +688,13 @@ function createTree(x, z) {
   const scale = 1.5 + Math.random() * 1.0; // Lebih besar dan megah
   treeGroup.scale.set(scale, scale, scale);
 
-  // Materials (Production Level)
-  const trunkMat = new THREE.MeshStandardMaterial({ 
-      color: 0x6d4c41, // Sedikit lebih terang agar tekstur terlihat
-      map: barkTexture,
-      roughness: 0.8, // Kayu tidak terlalu mengkilap
-      bumpMap: barkTexture,
-      bumpScale: 0.15, // Detail tekstur fisik
-      metalness: 0.1
-  });
-
-  const leavesMat = new THREE.MeshStandardMaterial({ 
-      color: 0x1b5e20, // Hijau tua
-      roughness: 0.6,
-      side: THREE.DoubleSide,
-      flatShading: false
-  });
-
   // 1. Main Trunk (Fused Roots System)
   const trunkHeight = 3.5 + Math.random();
   const trunkRadius = 0.6 + Math.random() * 0.4;
   
   // Central core (invisible or inner support)
   const coreGeom = new THREE.CylinderGeometry(trunkRadius * 0.8, trunkRadius, trunkHeight, 8);
-  const core = new THREE.Mesh(coreGeom, trunkMat);
+  const core = new THREE.Mesh(coreGeom, sharedTrunkMat);
   core.position.y = trunkHeight / 2;
   core.castShadow = true;
   core.receiveShadow = true;
@@ -655,7 +718,7 @@ function createTree(x, z) {
       }
       rootGeom.computeVertexNormals();
 
-      const root = new THREE.Mesh(rootGeom, trunkMat);
+      const root = new THREE.Mesh(rootGeom, sharedTrunkMat);
       
       const angle = (i / rootCount) * Math.PI * 2 + Math.random() * 0.5;
       const dist = trunkRadius * (0.7 + Math.random() * 0.3);
@@ -689,7 +752,7 @@ function createTree(x, z) {
       branchGeom.translate(0, length/2, 0);
       branchGeom.rotateX(Math.PI / 2); // Point along Z
       
-      const branch = new THREE.Mesh(branchGeom, trunkMat);
+      const branch = new THREE.Mesh(branchGeom, sharedTrunkMat);
       branch.rotation.y = angle;
       const liftAngle = -0.1 - Math.random() * 0.3; // Lift up slightly
       branch.rotation.x = liftAngle; 
@@ -706,7 +769,7 @@ function createTree(x, z) {
           
           // Use Dodecahedron for leafy look
           const leafGeom = new THREE.DodecahedronGeometry(clumpSize, 0);
-          const leaf = new THREE.Mesh(leafGeom, leavesMat);
+          const leaf = new THREE.Mesh(leafGeom, sharedLeavesMat);
           
           // Position relative to branch (Local Z is length)
           leaf.position.set(
@@ -758,7 +821,7 @@ function createTree(x, z) {
           if (rootH > 0.5) {
               const aGeom = new THREE.CylinderGeometry(0.03, 0.05, rootH, 3);
               aGeom.translate(0, rootH/2, 0); // Pivot at bottom (ground)
-              const aRoot = new THREE.Mesh(aGeom, trunkMat);
+              const aRoot = new THREE.Mesh(aGeom, sharedTrunkMat);
               
               // Add some randomness to position
               aRoot.position.set(
@@ -775,7 +838,7 @@ function createTree(x, z) {
   
   // Top Canopy (Cover the center hole)
   const topGeom = new THREE.DodecahedronGeometry(2.5, 0);
-  const top = new THREE.Mesh(topGeom, leavesMat);
+  const top = new THREE.Mesh(topGeom, sharedLeavesMat);
   top.position.y = trunkHeight + 1;
   top.castShadow = true;
   treeGroup.add(top);
