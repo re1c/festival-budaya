@@ -344,55 +344,110 @@ function createGrass() {
 }
 createGrass();
 
-// Pohon sederhana
+// Pohon sederhana (Improved Procedural Tree)
 function createTree(x, z) {
-  const trunkGeom = new THREE.CylinderGeometry(0.3, 0.4, 3, 8);
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3728 });
-  const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-  trunk.position.set(x, 1.5, z);
-  trunk.castShadow = true;
-  scene.add(trunk);
+  const treeGroup = new THREE.Group();
+  treeGroup.position.set(x, 0, z);
 
-  const leavesGeom = new THREE.SphereGeometry(2, 8, 8);
-  const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1a4a1a });
-  const leaves = new THREE.Mesh(leavesGeom, leavesMat);
-  leaves.position.set(x, 4, z);
-  leaves.castShadow = true;
-  scene.add(leaves);
+  // Trunk (Batang) - Lebih detail
+  const trunkGeom = new THREE.CylinderGeometry(0.4, 0.6, 4, 8);
+  const trunkMat = new THREE.MeshStandardMaterial({ 
+      color: 0x3e2723,
+      roughness: 0.9 
+  });
+  const trunk = new THREE.Mesh(trunkGeom, trunkMat);
+  trunk.position.y = 2;
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  treeGroup.add(trunk);
+
+  // Foliage (Daun) - Multiple layers of cones for pine-like look
+  const leavesMat = new THREE.MeshStandardMaterial({ 
+      color: 0x1b5e20,
+      roughness: 0.8,
+      side: THREE.DoubleSide
+  });
+
+  const levels = 3;
+  for(let i=0; i<levels; i++) {
+      const size = 2.5 - (i * 0.5);
+      const yPos = 3.5 + (i * 1.5);
+      const leavesGeom = new THREE.ConeGeometry(size, 3, 8);
+      const leaves = new THREE.Mesh(leavesGeom, leavesMat);
+      leaves.position.y = yPos;
+      leaves.castShadow = true;
+      leaves.receiveShadow = true;
+      treeGroup.add(leaves);
+  }
+
+  scene.add(treeGroup);
 }
 
 // Spawn pohon random
-for (let i = 0; i < 30; i++) {
-  const x = (Math.random() - 0.5) * 150;
-  const z = (Math.random() - 0.5) * 150;
+for (let i = 0; i < 40; i++) { // Tambah jumlah pohon
+  const x = (Math.random() - 0.5) * 160;
+  const z = (Math.random() - 0.5) * 160;
   // Hindari area tengah (jalan) - expanded exclusion zone
   if (Math.abs(x) > 15 && Math.abs(z) > 15) {
     createTree(x, z);
   }
 }
 
-// Batu dekorasi
+// Batu dekorasi (Improved Rock Material)
+// Texture noise untuk batu
+const rockCanvas = document.createElement('canvas');
+rockCanvas.width = 256;
+rockCanvas.height = 256;
+const rCtx = rockCanvas.getContext('2d');
+rCtx.fillStyle = '#808080';
+rCtx.fillRect(0,0,256,256);
+for(let i=0; i<5000; i++) {
+    rCtx.fillStyle = Math.random() > 0.5 ? '#606060' : '#a0a0a0';
+    rCtx.fillRect(Math.random()*256, Math.random()*256, 2, 2);
+}
+const rockTexture = new THREE.CanvasTexture(rockCanvas);
+
 function createRock(x, z, scale = 1) {
-  const rockGeom = new THREE.DodecahedronGeometry(scale, 0);
+  const rockGeom = new THREE.DodecahedronGeometry(scale, 1); // Detail level 1 (lebih bulat tapi tetap low poly style)
+  // Deformasi vertex acak agar tidak terlalu simetris
+  const pos = rockGeom.attributes.position;
+  for(let i=0; i<pos.count; i++){
+      pos.setX(i, pos.getX(i) + (Math.random()-0.5)*0.2);
+      pos.setY(i, pos.getY(i) + (Math.random()-0.5)*0.2);
+      pos.setZ(i, pos.getZ(i) + (Math.random()-0.5)*0.2);
+  }
+  rockGeom.computeVertexNormals();
+
   const rockMat = new THREE.MeshStandardMaterial({
-    color: 0x555555,
+    map: rockTexture,
     roughness: 0.9,
+    bumpMap: rockTexture,
+    bumpScale: 0.1
   });
   const rock = new THREE.Mesh(rockGeom, rockMat);
-  rock.position.set(x, scale * 0.5, z);
-  rock.rotation.set(Math.random(), Math.random(), Math.random());
+  rock.position.set(x, scale * 0.4, z); // Sedikit tertanam di tanah
+  rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
   rock.castShadow = true;
+  rock.receiveShadow = true;
   scene.add(rock);
 }
 
-for (let i = 0; i < 20; i++) {
-  const x = (Math.random() - 0.5) * 100;
-  const z = (Math.random() - 0.5) * 100;
+for (let i = 0; i < 30; i++) { // Tambah jumlah batu
+  const x = (Math.random() - 0.5) * 120;
+  const z = (Math.random() - 0.5) * 120;
   // Hindari area tengah (jalan)
   if (Math.abs(x) > 15 && Math.abs(z) > 15) {
-    createRock(x, z, 0.5 + Math.random() * 1);
+    createRock(x, z, 0.5 + Math.random() * 1.5);
   }
 }
+
+// MOON MESH (Visual Representation of Light Source)
+const moonGeom = new THREE.SphereGeometry(5, 32, 32);
+const moonMat = new THREE.MeshBasicMaterial({ color: 0xaaccff }); // Emissive look
+const moonMesh = new THREE.Mesh(moonGeom, moonMat);
+// Posisikan sama dengan directional light tapi lebih jauh agar terlihat di langit
+moonMesh.position.copy(moonLight.position).normalize().multiplyScalar(400); 
+scene.add(moonMesh);
 
 // =========================
 // OGOH-OGOH SYSTEM
