@@ -1248,12 +1248,10 @@ function loadBhutaKala() {
     const z = 0;
     const yPos = 3;
     
-    // OPTIMASI: Gunakan 2 Lampu Diagonal (Cukup untuk menerangi 4 sisi secara visual)
+    // OPTIMASI: 2 Lampu Diagonal (Cukup untuk menerangi 4 sisi secara visual)
     // Hemat 50% performa lighting dibanding 4 lampu
     createTorchLight(x + 8, 1, z + 8, true);  // Light ON (Depan Kanan)
     createTorchLight(x - 8, 1, z - 8, true);  // Light ON (Belakang Kiri)
-    createTorchLight(x + 8, 1, z - 8, false); // Visual Only
-    createTorchLight(x - 8, 1, z + 8, false); // Visual Only
 
     loader.load('ogoh.glb', (gltf) => {
         const model = gltf.scene;
@@ -1305,8 +1303,6 @@ function loadKuwera() {
     // OPTIMASI: 2 Lampu Diagonal
     createTorchLight(x + 5, 1, z + 5, true);  // Light ON
     createTorchLight(x - 5, 1, z - 5, true);  // Light ON
-    createTorchLight(x + 5, 1, z - 5, false); // Visual Only
-    createTorchLight(x - 5, 1, z + 5, false); // Visual Only
 
     loader.load('kuwera_punia.glb', (gltf) => {
         const model = gltf.scene;
@@ -1365,8 +1361,6 @@ function loadReog() {
     // OPTIMASI: 2 Lampu Diagonal
     createTorchLight(x + 5, 1, z + 5, true);  // Light ON
     createTorchLight(x - 5, 1, z - 5, true);  // Light ON
-    createTorchLight(x + 5, 1, z - 5, false); // Visual Only
-    createTorchLight(x - 5, 1, z + 5, false); // Visual Only
 
     loader.load('reog.glb', (gltf) => {
         const model = gltf.scene;
@@ -1417,8 +1411,6 @@ function loadRangda() {
     // OPTIMASI: 2 Lampu Diagonal
     createTorchLight(x + 5, 1, z + 5, true);  // Light ON
     createTorchLight(x - 5, 1, z - 5, true);  // Light ON
-    createTorchLight(x + 5, 1, z - 5, false); // Visual Only
-    createTorchLight(x - 5, 1, z + 5, false); // Visual Only
 
     loader.load('patung-rangda.glb', (gltf) => {
         const model = gltf.scene;
