@@ -105,7 +105,7 @@ scene.fog = new THREE.FogExp2(0x050510, 0.002); // Fog dikurangi agar bintang te
 // STARFIELD (Realistic Stars)
 function createStarfield() {
     const starsGeometry = new THREE.BufferGeometry();
-    const starsCount = 3000; // Reduced count (5000 -> 3000)
+    const starsCount = 1000; // Reduced count (3000 -> 1000) for Potato PC
     const posArray = new Float32Array(starsCount * 3);
     const sizeArray = new Float32Array(starsCount);
 
@@ -159,7 +159,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(1); // PAKSA 1.0 (Jangan ikutin retina display)
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap; // Ganti ke PCF biasa (lebih ringan dari SoftShadow)
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Ganti ke SoftShadow (Paling halus)
 renderer.toneMapping = THREE.ACESFilmicToneMapping; 
 renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
@@ -200,15 +200,16 @@ scene.add(hemiLight);
 const moonLight = new THREE.DirectionalLight(0xaaccff, 2.5); // Intensity tinggi untuk tone mapping
 moonLight.position.set(50, 100, 50);
 moonLight.castShadow = true;
-moonLight.shadow.mapSize.width = 512; // Ultra Low Res Shadow
-moonLight.shadow.mapSize.height = 512;
+moonLight.shadow.mapSize.width = 2048; // Resolusi Tinggi (2K) untuk menghilangkan kotak-kotak
+moonLight.shadow.mapSize.height = 2048;
 moonLight.shadow.camera.near = 0.5;
 moonLight.shadow.camera.far = 500;
-moonLight.shadow.camera.left = -100;
-moonLight.shadow.camera.right = 100;
-moonLight.shadow.camera.top = 100;
-moonLight.shadow.camera.bottom = -100;
-moonLight.shadow.bias = -0.0005; // Mengurangi shadow acne
+moonLight.shadow.camera.left = -90; // Dipersempit sedikit agar lebih tajam
+moonLight.shadow.camera.right = 90;
+moonLight.shadow.camera.top = 90;
+moonLight.shadow.camera.bottom = -90;
+moonLight.shadow.bias = -0.0001; // Reduced bias
+moonLight.shadow.normalBias = 0.02; // Use normalBias for better curved surface shadows
 scene.add(moonLight);
 
 // Torch lights (obor) - Warm Orange
@@ -621,15 +622,15 @@ function createGrass() {
 createGrass();
 
 // Pohon sederhana (Improved Procedural Tree with Bark Texture)
-// Generate Bark Texture (High Res & Realistic)
+// Generate Bark Texture (Low Res for Potato PC)
 const barkCanvas = document.createElement('canvas');
-barkCanvas.width = 512; // Optimized (1024 -> 512)
-barkCanvas.height = 512;
+barkCanvas.width = 64; // Optimized (512 -> 64)
+barkCanvas.height = 64;
 const bCtx = barkCanvas.getContext('2d');
 
 // 1. Base Noise (Organic Brown)
 bCtx.fillStyle = '#3e2723';
-bCtx.fillRect(0,0,512,512);
+bCtx.fillRect(0,0,64,64);
 
 // Helper for noise
 function noise(ctx, width, height, density, color, sizeMin, sizeMax) {
@@ -644,10 +645,10 @@ function noise(ctx, width, height, density, color, sizeMin, sizeMax) {
 }
 
 // 2. Deep Grooves (Vertical Striations)
-for(let i=0; i<2500; i++) { // Reduced count
-    const x = Math.random() * 512;
-    const y = Math.random() * 512;
-    const w = 2 + Math.random() * 4;
+for(let i=0; i<200; i++) { // Reduced count significantly
+    const x = Math.random() * 64;
+    const y = Math.random() * 64;
+    const w = 1 + Math.random() * 2;
     const h = 50 + Math.random() * 200;
     
     // Gradient for depth
@@ -691,21 +692,21 @@ barkTexture.wrapS = THREE.RepeatWrapping;
 barkTexture.wrapT = THREE.RepeatWrapping;
 barkTexture.repeat.set(2, 4); // Tiling agar detail terlihat tajam
 
-// Generate Leaf Texture (High Res Foliage)
+// Generate Leaf Texture (Low Res Foliage)
 const leafCanvas = document.createElement('canvas');
-leafCanvas.width = 256; // Optimized (512 -> 256)
-leafCanvas.height = 256;
+leafCanvas.width = 64; // Optimized (256 -> 64)
+leafCanvas.height = 64;
 const lCtx = leafCanvas.getContext('2d');
 
 // 1. Base Dark Background (Deep Shadow)
 lCtx.fillStyle = '#051005';
-lCtx.fillRect(0, 0, 256, 256);
+lCtx.fillRect(0, 0, 64, 64);
 
 // 2. Draw Thousands of Leaves
-for(let i=0; i<1500; i++) { // Reduced count
-    const x = Math.random() * 256;
-    const y = Math.random() * 256;
-    const size = 8 + Math.random() * 12;
+for(let i=0; i<200; i++) { // Reduced count
+    const x = Math.random() * 64;
+    const y = Math.random() * 64;
+    const size = 2 + Math.random() * 4;
     const angle = Math.random() * Math.PI * 2;
     
     lCtx.save();
@@ -1007,14 +1008,14 @@ if (allLeafGeometries.length > 0) {
 // Batu dekorasi (Improved Rock Material)
 // Texture noise untuk batu
 const rockCanvas = document.createElement('canvas');
-rockCanvas.width = 128; // Optimized (256 -> 128)
-rockCanvas.height = 128;
+rockCanvas.width = 64; // Optimized (128 -> 64)
+rockCanvas.height = 64;
 const rCtx = rockCanvas.getContext('2d');
 rCtx.fillStyle = '#808080';
-rCtx.fillRect(0,0,128,128);
-for(let i=0; i<1000; i++) { // Reduced count
+rCtx.fillRect(0,0,64,64);
+for(let i=0; i<200; i++) { // Reduced count
     rCtx.fillStyle = Math.random() > 0.5 ? '#606060' : '#a0a0a0';
-    rCtx.fillRect(Math.random()*128, Math.random()*128, 2, 2);
+    rCtx.fillRect(Math.random()*64, Math.random()*64, 2, 2);
 }
 const rockTexture = new THREE.CanvasTexture(rockCanvas);
 
@@ -1613,6 +1614,9 @@ document.addEventListener("keydown", (e) => {
       isNight = !isNight;
       toggleDayNight();
       break;
+    case "Digit3": // Toggle Quality
+      toggleQuality();
+      break;
   }
 });
 
@@ -1652,7 +1656,7 @@ blocker.style.cssText =
   "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-family: Segoe UI, sans-serif; color: white;";
 
 blocker.innerHTML =
-  '<h1 style="font-size: 48px; margin-bottom: 10px; color: #ff6b35;">FESTIVAL BUDAYA NYEPI</h1><p id="modeText" style="font-size: 18px; color: #aaa; margin-bottom: 30px;">Jelajahi Keindahan Budaya & Ogoh-ogoh</p><button id="playBtn" style="padding: 15px 40px; font-size: 20px; background: linear-gradient(45deg, #ff6b35, #f7931e); border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: bold;">MULAI JELAJAH</button><div style="margin-top: 40px; text-align: center; color: #888;"><p>WASD atau Arrow Keys - Bergerak</p><p>Shift - Lari (Sprint)</p><p>Mouse - Melihat sekeliling</p><p>Space - Lompat</p><p>[1] Musik | [2] Siang/Malam</p><p>Dekati Objek Budaya untuk melihat info</p></div>';
+  '<h1 style="font-size: 48px; margin-bottom: 10px; color: #ff6b35;">FESTIVAL BUDAYA NYEPI</h1><p id="modeText" style="font-size: 18px; color: #aaa; margin-bottom: 30px;">Jelajahi Keindahan Budaya & Ogoh-ogoh</p><button id="playBtn" style="padding: 15px 40px; font-size: 20px; background: linear-gradient(45deg, #ff6b35, #f7931e); border: none; border-radius: 10px; color: white; cursor: pointer; font-weight: bold;">MULAI JELAJAH</button><div style="margin-top: 40px; text-align: center; color: #888;"><p>WASD atau Arrow Keys - Bergerak</p><p>Shift - Lari (Sprint)</p><p>Mouse - Melihat sekeliling</p><p>Space - Lompat</p><p>[1] Musik | [2] Siang/Malam | [3] Grafis</p><p>Dekati Objek Budaya untuk melihat info</p></div>';
 document.body.appendChild(blocker);
 
 document.getElementById("playBtn").addEventListener("click", () => {
@@ -1799,10 +1803,62 @@ document.body.appendChild(musicBtn);
 
 // Day/Night Toggle
 let isNight = true;
+let isHighQuality = true; // Default High Quality
+
 const dayNightBtn = document.createElement("button");
 dayNightBtn.innerText = "[2] Mode: Malam";
 dayNightBtn.style.cssText =
   "position: fixed; top: 70px; right: 20px; padding: 10px 15px; background: rgba(0, 0, 0, 0.7); color: white; border: 2px solid #ff6b35; border-radius: 8px; cursor: pointer; font-size: 14px; z-index: 100; display: none;";
+
+const qualityBtn = document.createElement("button");
+qualityBtn.innerText = "[3] Grafis: TINGGI";
+qualityBtn.style.cssText =
+  "position: fixed; top: 120px; right: 20px; padding: 10px 15px; background: rgba(0, 0, 0, 0.7); color: #00ff00; border: 2px solid #00ff00; border-radius: 8px; cursor: pointer; font-size: 14px; z-index: 100; display: none;";
+
+function toggleQuality() {
+    isHighQuality = !isHighQuality;
+    
+    if (isHighQuality) {
+        // HIGH QUALITY MODE
+        qualityBtn.innerText = "[3] Grafis: TINGGI";
+        qualityBtn.style.color = "#00ff00";
+        qualityBtn.style.borderColor = "#00ff00";
+        
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(1.0);
+        bloomPass.enabled = true;
+        
+        // Restore Shadows
+        moonLight.castShadow = true;
+        
+    } else {
+        // PERFORMANCE MODE (POTATO)
+        qualityBtn.innerText = "[3] Grafis: RENDAH";
+        qualityBtn.style.color = "#ffff00";
+        qualityBtn.style.borderColor = "#ffff00";
+        
+        // Tetap nyalakan bayangan tapi versi murah (Basic)
+        renderer.shadowMap.enabled = true; 
+        renderer.shadowMap.type = THREE.BasicShadowMap; 
+        
+        renderer.setPixelRatio(0.8); // Turunkan resolusi render 20%
+        bloomPass.enabled = false; // Matikan efek glow berat
+        
+        // Keep Shadows enabled but maybe lower resolution if possible (not easily changeable at runtime without re-init)
+        moonLight.castShadow = true; 
+    }
+    
+    // Re-compile shaders (perlu update material jika ada perubahan drastis, tapi untuk shadow map biasanya otomatis di frame berikutnya atau perlu traverse)
+    scene.traverse((child) => {
+        if (child.material) {
+            child.material.needsUpdate = true;
+        }
+    });
+}
+
+qualityBtn.onclick = toggleQuality;
+document.body.appendChild(qualityBtn);
 
 dayNightBtn.onclick = () => {
   isNight = !isNight;
@@ -1947,9 +2003,6 @@ function checkProximity() {
       nearestDist.toFixed(1) +
       " meter</div>";
 
-    // Animate ogoh-ogoh when near
-    nearest.position.y =
-      nearest.userData.originalY + Math.sin(Date.now() * 0.003) * 0.2;
   } else {
     currentNearestOgoh = null;
     nearestInfo.innerHTML = "Dekati Objek Budaya...";
@@ -1963,7 +2016,7 @@ function checkProximity() {
 
 // Kunang-kunang (Fireflies)
 function createFireflies() {
-    const count = 150;
+    const count = 50; // Reduced count (150 -> 50)
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const phases = new Float32Array(count); // Untuk kedip-kedip
@@ -1996,7 +2049,7 @@ createFireflies();
 
 // Daun Gugur (Falling Leaves)
 function createFallingLeaves() {
-    const count = 200; // Increased count for better effect under trees
+    const count = 50; // Reduced count (200 -> 50)
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const speeds = new Float32Array(count);
@@ -2065,13 +2118,20 @@ function animate() {
     minimap.style.display = "block";
     musicBtn.style.display = "block";
     dayNightBtn.style.display = "block";
+    qualityBtn.style.display = "block";
 
     // --- PHYSICS MOVEMENT ---
     
     // Damping (Inertia) - Slow down when not pressing keys
     playerState.velocity.x -= playerState.velocity.x * 10.0 * delta;
     playerState.velocity.z -= playerState.velocity.z * 10.0 * delta;
-    playerState.velocity.y -= 9.8 * 2.0 * delta; // Gravity (Mass 2.0)
+    
+    // FIX: Remove Double Gravity (Gravity is applied later)
+    // playerState.velocity.y -= 9.8 * 2.0 * delta; 
+
+    // FIX: Clamp Velocity to prevent "Drift" (Geser sendiri)
+    if (Math.abs(playerState.velocity.x) < 0.1) playerState.velocity.x = 0;
+    if (Math.abs(playerState.velocity.z) < 0.1) playerState.velocity.z = 0;
 
     playerState.direction.z = Number(playerState.moveForward) - Number(playerState.moveBackward);
     playerState.direction.x = Number(playerState.moveRight) - Number(playerState.moveLeft);
@@ -2139,6 +2199,10 @@ function animate() {
             // Walking Bobbing
             playerState.bobTimer += delta * 15; 
             const bobOffset = Math.sin(playerState.bobTimer) * 0.1;
+            
+            // FIX: Only apply bobbing visually, do NOT overwrite physics Y permanently
+            // But since camera.position is the physics object, we must be careful.
+            // The safest way is to ensure we are relative to groundHeight.
             camera.position.y = groundHeight + 2.0 + Math.abs(bobOffset); 
 
             // Footstep Sound
@@ -2149,9 +2213,14 @@ function animate() {
                 playerState.stepDistance = 0;
             }
         } else {
-            // Idle - Reset height
+            // Idle - Reset height smoothly
             playerState.bobTimer = 0;
-            camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundHeight + 2.0, delta * 10);
+            // FIX: Ensure we don't drift vertically due to lerp fighting physics
+            if (Math.abs(camera.position.y - (groundHeight + 2.0)) > 0.01) {
+                camera.position.y = THREE.MathUtils.lerp(camera.position.y, groundHeight + 2.0, delta * 10);
+            } else {
+                camera.position.y = groundHeight + 2.0; // Snap to perfect height
+            }
             playerState.stepDistance = 2.0; // Reset so next step comes quickly
         }
     }
@@ -2167,13 +2236,18 @@ function animate() {
       ", " +
       camera.position.z.toFixed(0);
 
+    // Animate Nearest Ogoh-ogoh (Always run this every frame for smoothness)
+    if (currentNearestOgoh && currentNearestOgoh.userData.originalY !== undefined) {
+        currentNearestOgoh.position.y = currentNearestOgoh.userData.originalY + Math.sin(Date.now() * 0.003) * 0.2;
+    }
+
     // Check proximity to Ogoh-ogoh (Throttled)
-    if (renderer.info.render.frame % 10 === 0) {
+    if (renderer.info.render.frame % 30 === 0) { // Reduced frequency (10 -> 30)
         checkProximity();
     }
 
     // Update minimap (Throttled for performance)
-    if (renderer.info.render.frame % 3 === 0) {
+    if (renderer.info.render.frame % 10 === 0) { // Reduced frequency (3 -> 10)
         updateMinimap();
     }
   } else {
