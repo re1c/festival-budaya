@@ -408,25 +408,30 @@ for(let i=0; i<5000; i++) {
 const rockTexture = new THREE.CanvasTexture(rockCanvas);
 
 function createRock(x, z, scale = 1) {
-  const rockGeom = new THREE.DodecahedronGeometry(scale, 1); // Detail level 1 (lebih bulat tapi tetap low poly style)
-  // Deformasi vertex acak agar tidak terlalu simetris
-  const pos = rockGeom.attributes.position;
-  for(let i=0; i<pos.count; i++){
-      pos.setX(i, pos.getX(i) + (Math.random()-0.5)*0.2);
-      pos.setY(i, pos.getY(i) + (Math.random()-0.5)*0.2);
-      pos.setZ(i, pos.getZ(i) + (Math.random()-0.5)*0.2);
-  }
-  rockGeom.computeVertexNormals();
+  // Ganti ke IcosahedronGeometry dengan detail 0 untuk bentuk batu yang lebih tajam/natural
+  // Hapus deformasi vertex manual yang menyebabkan mesh berlubang (tembus pandang)
+  const rockGeom = new THREE.IcosahedronGeometry(scale, 0); 
 
   const rockMat = new THREE.MeshStandardMaterial({
     map: rockTexture,
-    roughness: 0.9,
+    roughness: 1.0, // Batu sangat kasar
     bumpMap: rockTexture,
-    bumpScale: 0.1
+    bumpScale: 0.2, // Tekstur lebih dalam
+    color: 0x777777
   });
+  
   const rock = new THREE.Mesh(rockGeom, rockMat);
-  rock.position.set(x, scale * 0.4, z); // Sedikit tertanam di tanah
+  
+  // Gunakan Non-Uniform Scaling untuk variasi bentuk
+  rock.scale.set(
+      1 + (Math.random() * 0.5), // Agak lonjong
+      0.6 + (Math.random() * 0.4), // Agak gepeng
+      1 + (Math.random() * 0.5)
+  );
+  
+  rock.position.set(x, scale * 0.3, z); // Tertanam di tanah
   rock.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+  
   rock.castShadow = true;
   rock.receiveShadow = true;
   scene.add(rock);
@@ -437,7 +442,7 @@ for (let i = 0; i < 30; i++) { // Tambah jumlah batu
   const z = (Math.random() - 0.5) * 120;
   // Hindari area tengah (jalan)
   if (Math.abs(x) > 15 && Math.abs(z) > 15) {
-    createRock(x, z, 0.5 + Math.random() * 1.5);
+    createRock(x, z, 0.5 + Math.random() * 1.0);
   }
 }
 
