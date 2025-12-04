@@ -27,6 +27,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ASSETS IMPORT (Vite will resolve these to correct URLs)
 import ogohUrl from './assets/ogoh.glb?url';
@@ -97,8 +99,6 @@ function checkHorizontalCollision(x, z, y) {
     }
     return false;
 }
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 // =========================
 // SETUP DASAR SCENE
