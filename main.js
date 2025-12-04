@@ -24,6 +24,7 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -1319,10 +1320,55 @@ moonMesh.position.copy(moonLight.position).normalize().multiplyScalar(400);
 scene.add(moonMesh);
 
 // =========================
+// LOADING MANAGER (PROGRESS BAR)
+// =========================
+const loadingScreen = document.createElement('div');
+loadingScreen.id = 'loadingScreen';
+loadingScreen.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #050510; z-index: 9999; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; color: #ff6b35; font-family: 'Segoe UI', sans-serif;
+`;
+loadingScreen.innerHTML = `
+    <h1 style="font-size: 24px; margin-bottom: 20px; letter-spacing: 2px;">MEMUAT ASET BUDAYA...</h1>
+    <div style="width: 300px; height: 6px; background: #1a1a30; border-radius: 3px; overflow: hidden; box-shadow: 0 0 10px rgba(255, 107, 53, 0.2);">
+        <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ff6b35, #ffaa00); transition: width 0.2s;"></div>
+    </div>
+    <p id="loadingText" style="margin-top: 15px; font-size: 12px; color: #888;">0%</p>
+`;
+document.body.appendChild(loadingScreen);
+
+const loadingManager = new THREE.LoadingManager();
+loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+    const progress = (itemsLoaded / itemsTotal) * 100;
+    const bar = document.getElementById('progressBar');
+    const text = document.getElementById('loadingText');
+    if(bar && text) {
+        bar.style.width = progress + '%';
+        text.innerText = Math.round(progress) + '%';
+    }
+};
+loadingManager.onLoad = () => {
+    // Fade out loading screen
+    loadingScreen.style.transition = 'opacity 1s ease';
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => {
+        loadingScreen.style.display = 'none';
+    }, 1000);
+};
+
+// =========================
 // OGOH-OGOH SYSTEM
 // =========================
 
-const loader = new GLTFLoader();
+const loader = new GLTFLoader(loadingManager);
+
+// Setup Draco Loader (Optional: Jika model dikompresi pakai Draco)
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+dracoLoader.setDecoderConfig({ type: 'js' });
+loader.setDRACOLoader(dracoLoader);
+
 const ogohOgohList = [];
 const mixers = []; // Array untuk menyimpan animation mixer
 
@@ -1743,7 +1789,7 @@ const bgMusic = new THREE.Audio(listener);
 const stepSound = new THREE.Audio(listener);
 const hitSound = new THREE.Audio(listener);
 
-const audioLoader = new THREE.AudioLoader();
+const audioLoader = new THREE.AudioLoader(loadingManager);
 
 // 1. Background Music
 audioLoader.load(gamelanUrl, (buffer) => {
