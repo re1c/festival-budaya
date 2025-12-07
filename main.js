@@ -1415,7 +1415,8 @@ function loadBhutaKala() {
         
         model.userData = {
             name: "Bhuta Kala",
-            description: "Raksasa penguasa waktu dan kematian",
+            description: "Bhuta Kala adalah konsep penting dalam Hindu Bali yang merujuk pada kekuatan alam semesta yang bersifat negatif atau liar (Bhuta) dan kekuatan waktu (Kala) yang bisa membawa kekacauan atau gangguan jika tidak diseimbangkan.",
+            link: "https://id.wikipedia.org/wiki/Butakala",
             originalY: yPos
         };
         
@@ -1477,7 +1478,8 @@ function loadKuwera() {
         
         model.userData = {
             name: "Kuwera Punia",
-            description: "Simbol kemakmuran dan kesejahteraan",
+            description: "Kuwera Punia adalah sebuah konsep atau tema dalam seni ogoh-ogoh di Bali, merujuk pada figur Dewa Kuwera (Dewa kekayaan) yang menyatu dengan bhutakala (kekuatan negatif/raksasa), melambangkan penyatuan kekuatan alamiah dan spiritual, serta menjadi persembahan (punia) untuk keseimbangan, sering diarak saat Nyepi sebagai wujud persembahan (karma).",
+            link: "https://balitribune.co.id/content/ogoh-ogoh-kuwera-punia-karma-raih-juara-i-se-badung",
             originalY: yPos
         };
         
@@ -1531,7 +1533,8 @@ function loadReog() {
         
         model.userData = {
             name: "Reog Ponorogo",
-            description: "Semangat pelindung dan keberuntungan",
+            description: "Reog Ponorogo adalah seni pertunjukan tradisional khas Ponorogo, Jawa Timur, yang terkenal dengan topeng Dadak Merak raksasa berlapis bulu merak dan singa, menggambarkan kisah cinta dan perlawanan mitologis dengan nilai keberanian, gotong royong, serta spiritualitas Kejawen.",
+            link: "https://id.wikipedia.org/wiki/Reog",
             originalY: yPos
         };
         
@@ -1585,7 +1588,8 @@ function loadRangda() {
         
         model.userData = {
             name: "Rangda",
-            description: "Ratu iblis dan ratu dari para leak (ilmu hitam) dalam mitologi Bali,",
+            description: "Rangda adalah sosok legendaris dalam mitologi Hindu Bali, ratu dari para leak (makhluk jahat), melambangkan kejahatan dan kekuatan negatif, sering digambarkan menyeramkan dengan taring dan lidah menjulur, serta menjadi lawan utama Barong (simbol kebaikan) dalam tari tradisional untuk menunjukkan keseimbangan Rwa Bhineda (baik-buruk).",
+            link: "https://id.wikipedia.org/wiki/Rangda",
             originalY: yPos
         };
         
@@ -1724,6 +1728,14 @@ controls.addEventListener("lock", () => {
 controls.addEventListener("unlock", () => {
   blocker.style.display = "flex";
 });
+
+// Prevent pointer lock when clicking on statue info panel
+document.addEventListener('click', (e) => {
+  const statuePanel = document.getElementById('statueInfoPanel');
+  if (statuePanel && statuePanel.contains(e.target)) {
+    e.stopPropagation();
+  }
+}, true);
 
 // HUD
 const hud = document.createElement("div");
@@ -2150,6 +2162,102 @@ window.addEventListener("resize", () => {
 const clock = new THREE.Clock();
 const raycaster = new THREE.Raycaster();
 const downVector = new THREE.Vector3(0, -1, 0);
+
+// =========================
+// STATUE INFO PANEL (Double-Click Handler)
+// =========================
+
+const statueInfoPanel = document.getElementById('statueInfoPanel');
+const closeStatueInfoBtn = document.getElementById('closeStatueInfo');
+const infoHint = document.getElementById('infoHint');
+const statueTitle = document.getElementById('statueTitle');
+
+// Store current statue link for title click
+let currentStatueLink = null;
+
+// Show hint when not locked
+let showHintTimeout;
+const showInfoHint = () => {
+    if (!controls.isLocked) {
+        infoHint.style.display = 'block';
+        clearTimeout(showHintTimeout);
+        showHintTimeout = setTimeout(() => {
+            infoHint.style.display = 'none';
+        }, 5000);
+    }
+};
+
+// Prevent pointer lock when interacting with panel
+statueInfoPanel.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+});
+
+statueInfoPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+});
+
+// Close button handler
+closeStatueInfoBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    statueInfoPanel.style.display = 'none';
+});
+
+// Title click handler - open Wikipedia link
+statueTitle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('Title clicked, link:', currentStatueLink);
+    if (currentStatueLink) {
+        window.open(currentStatueLink, '_blank');
+    }
+}, true);
+
+// Add tooltip on title hover
+statueTitle.addEventListener('mouseenter', () => {
+    if (currentStatueLink) {
+        statueTitle.title = 'Click to open Wikipedia';
+    }
+});
+
+// Double-click handler for statues
+document.addEventListener('dblclick', (event) => {
+    if (controls.isLocked) return; // Only work when not in first-person mode
+
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    
+    // Check intersection with statue models
+    const intersects = raycaster.intersectObjects(ogohOgohList, true);
+    
+    if (intersects.length > 0) {
+        // Find the parent statue model (traverse up)
+        let statueMesh = intersects[0].object;
+        let statueModel = statueMesh;
+        
+        // Traverse up to find the root statue model
+        while (statueModel.parent && statueModel.parent !== scene) {
+            statueModel = statueModel.parent;
+        }
+
+        // Display info panel
+        if (statueModel.userData && statueModel.userData.name) {
+            const data = statueModel.userData;
+            document.getElementById('statueTitle').textContent = data.name;
+            document.getElementById('statueDescription').textContent = data.description;
+            
+            // Store the link for title click handler
+            currentStatueLink = data.link;
+            
+            statueInfoPanel.style.display = 'block';
+        }
+    }
+});
 
 function animate() {
   requestAnimationFrame(animate);

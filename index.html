@@ -7,11 +7,111 @@
         body {
             margin: 0;
             overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #statueInfoPanel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(5, 5, 16, 0.95);
+            color: #ff6b35;
+            padding: 20px;
+            padding-top: 40px;
+            border-radius: 8px;
+            max-width: 400px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 2px solid #ff6b35;
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+            display: none;
+            z-index: 100;
+            font-size: 14px;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        #statueTitle {
+            position: relative;
+            display: block;
+            margin: -20px -20px 10px -20px;
+            padding: 15px 20px;
+            font-size: 20px;
+            color: #ffaa00;
+            border-bottom: 2px solid #ff6b35;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            width: calc(100% + 40px);
+            box-sizing: border-box;
+            z-index: 101;
+        }
+
+        #statueTitle:hover {
+            background: rgba(255, 107, 53, 0.1);
+            color: #ff6b35;
+            text-decoration: underline;
+            transform: scale(1.02);
+        }
+
+        #statueInfoPanel p {
+            margin: 10px 0;
+            color: #e8e8e8;
+        }
+
+        #statueInfoPanel a {
+            color: #ffaa00;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        #statueInfoPanel a:hover {
+            text-decoration: underline;
+            color: #ff6b35;
+        }
+
+        #closeStatueInfo {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff6b35;
+            color: #050510;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #closeStatueInfo:hover {
+            background: #ffaa00;
+        }
+
+        #infoHint {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #ff6b35;
+            font-size: 12px;
+            background: rgba(5, 5, 16, 0.8);
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: 1px solid #ff6b35;
+            display: none;
+            z-index: 99;
         }
     </style>
 </head>
 
 <body>
+    <div id="statueInfoPanel">
+        <div id="statueTitle">Statue Name</div>
+        <button id="closeStatueInfo">×</button>
+        <p id="statueDescription">Description goes here</p>
+    </div>
+    <div id="infoHint">Double-click on a statue for information</div>
     <script type="module" src="main.js"></script>
 </body>
 
