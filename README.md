@@ -1,24 +1,25 @@
-# Reog Ponorogo 3D Interactive Museum
+# Festival Budaya Nyepi - 3D Interactive Museum
 
-An interactive 3D visualization of Reog Ponorogo, a traditional performing art from Ponorogo, East Java, Indonesia. Built with Three.js.
+Museum 3D interaktif yang menampilkan Ogoh-ogoh dan objek budaya Indonesia untuk perayaan **Nyepi** (Hari Raya Seni dan Budaya Bali). Dibangun dengan Three.js.
 
-> **Work in Progress:** Early prototype for an upcoming open-world Borobudur temple environment featuring Reog characters.
+> **Final Project** - Mata Kuliah Grafika Komputer, Semester 5
 
-## Features
+## ✨ Fitur
 
-- Interactive 3D Reog Ponorogo model with dynamic textures
-- Dual camera control systems (Orbit & First-Person)
-- Dynamic lighting with animated spotlights
-- Interactive hover and click events with audio feedback
-- Traditional gamelan music system
-- Real-time texture switching (GLB ↔ PNG materials)
+- **4 Model 3D Budaya**: Bhuta Kala, Kuwera Punia, Reog Ponorogo, dan Rangda
+- **Open World 3D**: Eksplorasi bebas dengan jalan setapak, pohon Beringin, reruntuhan candi
+- **Sistem Fisika Minecraft-style**: Gravity, jumping, collision detection
+- **Mode Siang/Malam**: Toggle pencahayaan realistis
+- **Efek Visual**: Bloom, particles (kunang-kunang, daun jatuh), animasi api obor
+- **Audio Immersive**: Musik gamelan, suara langkah kaki
+- **Responsive & Optimized**: Draco compression, instanced geometry, quality toggle
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ or Node.js 20.19.0+ / 22.12.0+
-- npm or pnpm
+- Node.js 18+ atau Node.js 20.19.0+ / 22.12.0+
+- npm atau pnpm
 
 ### Installation
 
@@ -28,13 +29,11 @@ npm install
 
 ### Development
 
-Start the development server with hot module replacement:
-
 ```bash
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Buka `http://localhost:5173` di browser.
 
 ### Build for Production
 
@@ -48,68 +47,74 @@ npm run build
 npm run preview
 ```
 
-## Controls
+## 🎮 Kontrol
 
-### Camera Modes
+| Key                       | Fungsi                                       |
+| ------------------------- | -------------------------------------------- |
+| **WASD** / **Arrow Keys** | Bergerak                                     |
+| **Mouse**                 | Melihat sekeliling (saat Pointer Lock aktif) |
+| **Shift**                 | Sprint (lari cepat)                          |
+| **Space**                 | Lompat                                       |
+| **[1]**                   | Toggle musik On/Off                          |
+| **[2]**                   | Toggle Mode Siang/Malam                      |
+| **[3]**                   | Toggle Kualitas Grafis (Tinggi/Rendah)       |
+| **Double-click**          | Info detail patung (saat di menu)            |
 
-**Orbit Mode (Default)**
-- Drag: Rotate camera around model
-- Scroll: Zoom in/out
-- Panel buttons: Additional controls
-
-**First-Person Mode** (Toggle via "Mode" button)
-- `W` / `S`: Move forward/backward
-- `A` / `D`: Strafe left/right
-- `Arrow Keys`: Look around
-
-### Panel Controls
-
-- **Zoom In/Out**: Manual zoom controls
-- **Reset Camera**: Return to default view
-- **Auto Orbit**: Enable automatic rotation
-- **Mode Toggle**: Switch between Orbit and FPS
-- **Texture Cycle**: Switch through texture variations
-
-### Model Interactions
-
-- **Hover**: Highlights model with emissive glow + plays kendang percussion
-- **Click**: Triggers gong sound + displays contextual information:
-  - **Top (>70%)**: Dadak Merak (iconic peacock feathers)
-  - **Middle (35-70%)**: Barongan/Warok (main mask face)
-  - **Bottom (<35%)**: Traditional costume details
-
-## Project Structure
+## 📁 Struktur Proyek
 
 ```
 fp-grafkom/
+├── assets/
+│   ├── ogoh.glb              # Model Bhuta Kala (Draco compressed)
+│   ├── kuwera_punia.glb      # Model Kuwera Punia (Draco compressed)
+│   ├── reog.glb              # Model Reog Ponorogo (Draco compressed)
+│   ├── patung-rangda.glb     # Model Rangda (Draco compressed)
+│   ├── gamelan-bali.mp3      # Background music
+│   ├── step.m4a              # Footstep sound
+│   └── hit.mp3               # Collision sound
 ├── public/
-│   ├── Reog.glb           # 3D model (GLTF format)
-│   ├── reog-music.mp3     # Background gamelan music
-│   └── texture_*.png      # Alternative texture maps
-├── main.js                # Core application logic
-├── index.html             # Entry point
-└── package.json           # Dependencies & scripts
+│   └── favicon.ico
+├── main.js                   # Core application logic
+├── index.html                # Entry point
+├── vite.config.js            # Vite configuration
+└── package.json              # Dependencies & scripts
 ```
 
-## Tech Stack
+## 🎭 Objek Budaya
 
-- **[Three.js](https://threejs.org/)** - WebGL 3D rendering library
-- **[Vite](https://vitejs.dev/)** - Next-generation build tool
+| Nama              | Deskripsi                                           | Posisi    |
+| ----------------- | --------------------------------------------------- | --------- |
+| **Bhuta Kala**    | Kekuatan alam semesta negatif/liar dalam Hindu Bali | (0, 0)    |
+| **Kuwera Punia**  | Dewa kekayaan menyatu dengan bhutakala              | (0, 40)   |
+| **Reog Ponorogo** | Seni pertunjukan tradisional Jawa Timur             | (-40, 0)  |
+| **Rangda**        | Ratu para leak, simbol kekuatan negatif             | (-40, 40) |
 
-## Roadmap
+## ⚡ Optimasi Performa
 
-- [ ] Borobudur temple environment
-- [ ] Open-world navigation system
-- [ ] Multiple interactive Reog characters
-- [ ] Enhanced visual effects and animations
-- [ ] Performance optimizations
-- [ ] Mobile device support
+Proyek ini dioptimasi untuk performa tinggi:
 
-## Development Notes
+- **Draco Compression**: Semua model GLB dikompresi dengan Draco (~72% lebih kecil)
+- **Geometry Merging**: Pohon dan reruntuhan digabung untuk mengurangi draw calls
+- **Instanced Rendering**: 8000 rumput dengan satu draw call
+- **Shadow Optimization**: Shadow map resolusi rendah (1024x1024)
+- **Post-Processing**: Bloom effect dengan resolusi 1/8
+- **Quality Toggle**: Option untuk grafis rendah di PC kurang kencang
 
-This project uses ES modules (`type: "module"` in package.json). All Three.js imports follow the modern ES6+ syntax.
+### Ukuran Asset (Setelah Kompresi)
 
-## License
+| File         | Ukuran |
+| ------------ | ------ |
+| Total Assets | ~20MB  |
+| GLB Models   | ~17MB  |
+| Audio        | ~3MB   |
+
+## 🛠️ Tech Stack
+
+- **[Three.js](https://threejs.org/)** - WebGL 3D rendering
+- **[Vite](https://vitejs.dev/)** - Build tool
+- **[gltf-transform](https://gltf-transform.dev/)** - GLB optimization & Draco compression
+
+## 📜 License
 
 ISC
 

@@ -21,6 +21,11 @@
  *    - Environment: MeshLambertMaterial (Gouraud Shading - Cheapest)
  *    - Textures: Generated at low res (128px - 512px)
  *    - Geometry: Merged (Trees, Ruins) & Instanced (Grass)
+ * 
+ * 5. Caching & Loading:
+ *    - Service Worker: Cache-first for GLB/audio, Network-first for scripts
+ *    - Audio Streaming: HTML5 Audio for background music (starts before full download)
+ *    - Draco Compression: All GLB models compressed (~72% size reduction)
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -30,6 +35,21 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+
+// =========================
+// SERVICE WORKER REGISTRATION (Caching)
+// =========================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[App] Service Worker registered:', registration.scope);
+      })
+      .catch((error) => {
+        console.log('[App] Service Worker registration failed:', error);
+      });
+  });
+}
 
 // ASSETS IMPORT (Vite will resolve these to correct URLs)
 import ogohUrl from './assets/ogoh.glb?url';
@@ -1714,9 +1734,9 @@ document.body.appendChild(blocker);
 
 document.getElementById("playBtn").addEventListener("click", () => {
   controls.lock();
-  // Play background music if not playing
-  if (!bgMusic.isPlaying && bgMusic.buffer) {
-      bgMusic.play();
+  // Play background music (HTML5 streaming)
+  if (bgMusicElement.paused) {
+      bgMusicElement.play().catch(e => console.log('Audio play blocked:', e));
       musicBtn.innerText = "[1] Musik: ON";
   }
 });
@@ -1792,37 +1812,39 @@ function updateMinimap() {
 }
 
 // =========================
-// AUDIO SYSTEM
+// AUDIO SYSTEM (STREAMING OPTIMIZED)
 // =========================
 
 const listener = new THREE.AudioListener();
 camera.add(listener);
 
+// 1. Background Music - HTML5 STREAMING (starts playing before full download)
+const bgMusicElement = new Audio(gamelanUrl);
+bgMusicElement.crossOrigin = 'anonymous';
+bgMusicElement.loop = true;
+bgMusicElement.preload = 'auto'; // Enable streaming preload
+bgMusicElement.volume = 0.3;
+
 const bgMusic = new THREE.Audio(listener);
+bgMusic.setMediaElementSource(bgMusicElement);
+
+// 2. Step Sound - Buffer (small file, needs low latency)
 const stepSound = new THREE.Audio(listener);
 const hitSound = new THREE.Audio(listener);
 
 const audioLoader = new THREE.AudioLoader(loadingManager);
 
-// 1. Background Music
-audioLoader.load(gamelanUrl, (buffer) => {
-  bgMusic.setBuffer(buffer);
-  bgMusic.setLoop(true);
-  bgMusic.setVolume(0.3);
-});
-
-// 2. Step Sound (Minecraft Style)
 audioLoader.load(stepUrl, (buffer) => {
   stepSound.setBuffer(buffer);
   stepSound.setLoop(false);
-  stepSound.setVolume(1.2); // Volume ditingkatkan (Boosted)
+  stepSound.setVolume(1.2);
 });
 
-// 3. Hit Sound (Minecraft Style)
+// 3. Hit Sound - Buffer (small file)
 audioLoader.load(hitUrl, (buffer) => {
   hitSound.setBuffer(buffer);
   hitSound.setLoop(false);
-  hitSound.setVolume(0.2); // Volume dikurangi
+  hitSound.setVolume(0.2);
 });
 
 function playStepSound() {
@@ -1850,11 +1872,11 @@ musicBtn.style.cssText =
   "position: fixed; top: 20px; right: 20px; padding: 10px 15px; background: rgba(0, 0, 0, 0.7); color: white; border: 2px solid #ff6b35; border-radius: 8px; cursor: pointer; font-size: 14px; z-index: 100; display: none;";
 
 function toggleMusic() {
-  if (bgMusic.isPlaying) {
-    bgMusic.pause();
+  if (!bgMusicElement.paused) {
+    bgMusicElement.pause();
     musicBtn.innerText = "[1] Musik: OFF";
   } else {
-    bgMusic.play();
+    bgMusicElement.play().catch(e => console.log('Audio play blocked:', e));
     musicBtn.innerText = "[1] Musik: ON";
   }
 }
