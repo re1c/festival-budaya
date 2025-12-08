@@ -61,6 +61,16 @@ import stepUrl from './assets/step.m4a?url';
 import hitUrl from './assets/hit.mp3?url';
 
 // =========================
+// GEOMETRY MERGE HELPER (Fix for mergeGeometries compatibility)
+// =========================
+// Normalizes geometries to non-indexed format to prevent merge failures
+function prepareForMerge(geometries) {
+    return geometries
+        .filter(g => g && g.getAttribute('position'))
+        .map(g => g.index ? g.toNonIndexed() : g);
+}
+
+// =========================
 // PHYSICS & COLLISION SYSTEM (MINECRAFT STYLE)
 // =========================
 const worldColliders = []; // Array of THREE.Box3
@@ -945,16 +955,16 @@ function getTreeGeometries(x, z) {
   let mergedLeaves = null;
 
   if (trunkGeometries.length > 0) {
-      const validTrunks = trunkGeometries.filter(g => g && g.getAttribute('position'));
-      if (validTrunks.length > 0) {
-          mergedTrunk = BufferGeometryUtils.mergeGeometries(validTrunks);
+      const prepared = prepareForMerge(trunkGeometries);
+      if (prepared.length > 0) {
+          mergedTrunk = BufferGeometryUtils.mergeGeometries(prepared);
       }
   }
   
   if (leafGeometries.length > 0) {
-      const validLeaves = leafGeometries.filter(g => g && g.getAttribute('position'));
-      if (validLeaves.length > 0) {
-          mergedLeaves = BufferGeometryUtils.mergeGeometries(validLeaves);
+      const prepared = prepareForMerge(leafGeometries);
+      if (prepared.length > 0) {
+          mergedLeaves = BufferGeometryUtils.mergeGeometries(prepared);
       }
   }
 
@@ -1009,7 +1019,7 @@ for (let i = 0; i < 40; i++) { // Tambah jumlah pohon
 
 // FINAL MERGE FOR TREES (Massive Draw Call Reduction)
 if (allTrunkGeometries.length > 0) {
-    const finalTrunkGeom = BufferGeometryUtils.mergeGeometries(allTrunkGeometries);
+    const finalTrunkGeom = BufferGeometryUtils.mergeGeometries(prepareForMerge(allTrunkGeometries));
     if (finalTrunkGeom) {
         const trunkMesh = new THREE.Mesh(finalTrunkGeom, sharedTrunkMat);
         trunkMesh.castShadow = true;
@@ -1019,7 +1029,7 @@ if (allTrunkGeometries.length > 0) {
 }
 
 if (allLeafGeometries.length > 0) {
-    const finalLeafGeom = BufferGeometryUtils.mergeGeometries(allLeafGeometries);
+    const finalLeafGeom = BufferGeometryUtils.mergeGeometries(prepareForMerge(allLeafGeometries));
     if (finalLeafGeom) {
         const leavesMesh = new THREE.Mesh(finalLeafGeom, sharedLeavesMat);
         leavesMesh.castShadow = true;
@@ -1085,9 +1095,9 @@ for (let i = 0; i < 30; i++) {
 }
 
 if (rockGeometries.length > 0) {
-    const validRocks = rockGeometries.filter(g => g && g.getAttribute('position'));
-    if (validRocks.length > 0) {
-        const mergedRocks = BufferGeometryUtils.mergeGeometries(validRocks);
+    const prepared = prepareForMerge(rockGeometries);
+    if (prepared.length > 0) {
+        const mergedRocks = BufferGeometryUtils.mergeGeometries(prepared);
         if (mergedRocks) {
             const rocksMesh = new THREE.Mesh(mergedRocks, rockMat);
             rocksMesh.castShadow = true;
@@ -1250,9 +1260,9 @@ function getRuinsGeometries(x, z) {
     // MERGE LOCAL
     let mergedGeom = null;
     if (geometries.length > 0) {
-        const validGeoms = geometries.filter(g => g && g.getAttribute('position'));
-        if (validGeoms.length > 0) {
-            mergedGeom = BufferGeometryUtils.mergeGeometries(validGeoms);
+        const prepared = prepareForMerge(geometries);
+        if (prepared.length > 0) {
+            mergedGeom = BufferGeometryUtils.mergeGeometries(prepared);
         }
     }
     
@@ -1322,7 +1332,7 @@ spawnRuinsAround(-40, 0, 6, 20);  // Reog Ponorogo
 
 // FINAL MERGE FOR RUINS
 if (allRuinGeometries.length > 0) {
-    const finalRuinGeom = BufferGeometryUtils.mergeGeometries(allRuinGeometries);
+    const finalRuinGeom = BufferGeometryUtils.mergeGeometries(prepareForMerge(allRuinGeometries));
     if (finalRuinGeom) {
         const ruinsMesh = new THREE.Mesh(finalRuinGeom, ruinMat);
         ruinsMesh.castShadow = true;
