@@ -14,6 +14,10 @@ Museum 3D interaktif yang menampilkan Ogoh-ogoh dan objek budaya Indonesia untuk
 - **Audio Immersive**: Musik gamelan, suara langkah kaki
 - **Responsive & Optimized**: Draco compression, instanced geometry, quality toggle
 
+## 🌐 Demo
+
+Tautan Deployment (Cloudflare Pages): [https://festival-nyepi.pages.dev](https://festival-nyepi.pages.dev)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
